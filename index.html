@@ -138,14 +138,18 @@
         </div>
         <div class="form-row">
           <label>單字清單(每行一個)</label>
-          <textarea id="bulk-text" rows="10" placeholder="支援三種格式,可混搭:
+          <textarea id="bulk-text" rows="11" placeholder="可混搭多種格式:
 
-serendipity | 意外之喜              (word | meaning)
-perspicacious | adj. | 敏銳的       (word | POS | meaning)
-unwind (v.) 放鬆,紓壓              (word (POS) meaning)
-nostalgia                            (只有單字)
-ephemeral — 短暫的"></textarea>
-          <p class="form-hint">分隔符:<code>|</code>、<code>—</code>、<code>:</code>、<code>=</code>。詞性可以用 <code>(v.)</code> 或 <code>[verb]</code>,或 <code>word | POS | meaning</code> 三段式。</p>
+unwind,(v.),放鬆、紓壓; 解開、卷開         ← 分號 ; 分不同意思,頓號、分同義詞
+present (adj.) 出席的 (n.) 禮物            ← 多詞性
+serendipity | n. | 意外之喜                ← 三段式
+perspicacious | 敏銳的                     ← 只有意思
+nostalgia                                   ← 只有單字"></textarea>
+          <p class="form-hint">
+            <strong>分號 <code>;</code></strong> = 不同意思(會自動編號 ①②)<br>
+            <strong>頓號 <code>、</code></strong> = 同義詞、近義字(保留在同一個意思裡)<br>
+            分隔符:<code>,</code> <code>|</code> <code>—</code> <code>:</code> <code>=</code> · 詞性用 <code>(v.)</code> 或 <code>[verb]</code>
+          </p>
         </div>
         <button type="submit" class="primary-btn">全部新增(不花 token)</button>
         <p class="hint">💡 一次匯入 100+ 個都沒問題。重複的會自動合併標籤,不會重複建立。</p>

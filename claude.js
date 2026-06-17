@@ -149,8 +149,15 @@ async function fetchWordExplanation(word, language) {
 請以 ${settings.nativeLanguage} 為母語的學習者為對象,提供:
 
 1. **發音**:IPA 音標(日文給羅馬拼音+假名,韓文給羅馬拼音)
-2. **詞性分類**:若有多個詞性,分開列出,每個詞性下列所有中文意思
-3. **英文解釋**:用英文簡短解釋
+2. **詞性與意思分類(重要!)**:
+   - 若有多個詞性(例如同時是名詞和動詞),分開列出
+   - **同一詞性下若有截然不同的意思(distinct senses),要分成多筆 meaning entry**,各自有自己的中文翻譯與英文解釋
+   - 同一個意思內的同義詞才放在 chineseTranslations 陣列裡(用頓號等級)
+   - 範例:unwind 的動詞有兩個截然不同的意思 → 列為兩筆:
+     • 第 1 筆:partOfSpeech="動詞", chineseTranslations=["放鬆","紓壓"], englishDefinition="to relax and let go of stress"
+     • 第 2 筆:partOfSpeech="動詞", chineseTranslations=["解開","卷開","展開"], englishDefinition="to unfold something that is wound up"
+   - **判斷標準**:如果中文意思需要用「或、另指」連接,或英文解釋需要用 "or" 分開兩個概念 → 就是不同意思,要分成兩筆
+3. **英文解釋**:每筆 meaning 各自有一個簡短英文解釋
 4. **3 個例句**:不同情境(日常 / 正式 / 文學等),附中文翻譯與情境
 5. **語感(分四部分)**
    - **coreFeel**:核心語感、感覺、整體形象(一段話)

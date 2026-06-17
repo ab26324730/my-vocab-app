@@ -486,6 +486,64 @@ main {
   border-radius: 4px;
   margin-right: 6px;
   font-weight: 600;
+  vertical-align: middle;
+}
+
+/* 同詞性多意思:① ② ③ 編號 */
+.sense-num {
+  display: inline-block;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 13px;
+  margin-right: 4px;
+  font-feature-settings: "tnum";
+}
+
+.senses-list {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.sense-item {
+  display: block;
+  padding: 1px 0;
+}
+
+.meaning-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.meaning-group .pos-inline {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Claude 詳細頁的 sense block */
+.sense-block {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #d6e0f3;
+}
+
+.sense-block:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.sense-block .sense-num {
+  font-size: 16px;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.sense-block .sense-content {
+  flex: 1;
 }
 
 .tag-suggestions {

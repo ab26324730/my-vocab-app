@@ -214,6 +214,44 @@ const POS_LABELS = {
   "數詞": "數詞 num.",
 };
 
+// 同 POS 多筆 meaning 時用 ①②③ 編號
+const SENSE_NUMERALS = ["①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩","⑪","⑫"];
+function senseNumeral(i) {
+  return SENSE_NUMERALS[i] || `${i + 1}.`;
+}
+
+// 把 meanings 陣列依 POS 分組(保留順序)
+// 輸入:[{partOfSpeech, text}]
+// 輸出:[{partOfSpeech, senses: [text, ...]}]
+function groupMeaningsByPOS(meanings) {
+  const groups = [];
+  for (const m of meanings) {
+    const pos = m.partOfSpeech || "";
+    let g = groups.find(x => x.partOfSpeech === pos);
+    if (!g) {
+      g = { partOfSpeech: pos, senses: [] };
+      groups.push(g);
+    }
+    if (m.text != null && m.text !== "") g.senses.push(m.text);
+  }
+  return groups;
+}
+
+// 渲染一個 POS group(卡片用,簡短)
+function renderPOSGroup(group) {
+  const pos = group.partOfSpeech
+    ? `<span class="pos-inline">${escapeHtml(formatPOS(group.partOfSpeech))}</span>`
+    : "";
+  if (group.senses.length <= 1) {
+    return `<div class="word-translation">${pos}${escapeHtml(group.senses[0] || "")}</div>`;
+  }
+  // 多意思:每個編號獨立一行
+  const sensesHtml = group.senses.map((s, i) =>
+    `<div class="sense-item"><span class="sense-num">${senseNumeral(i)}</span>${escapeHtml(s)}</div>`
+  ).join("");
+  return `<div class="meaning-group">${pos}<div class="senses-list">${sensesHtml}</div></div>`;
+}
+
 function formatPOS(pos) {
   if (!pos) return "";
   const trimmed = String(pos).trim();
@@ -237,26 +275,21 @@ function getQuickMeanings(w) {
   return [];
 }
 
-// 把多個意思合併到既有單字中(避免重複,但允許新詞性)
+// 把多個意思合併到既有單字中(同詞性的不同意思也會各自保留為一筆)
 function mergeMeaningsInto(existing, newMeanings) {
   const current = getQuickMeanings(existing);
   let added = 0;
-  for (const m of newMeanings || []) {
+  // 先把新進來的 meanings 用 ; 展開成多筆
+  const expanded = expandSensesInMeanings(newMeanings || []);
+  for (const m of expanded) {
     if (!m || (!m.partOfSpeech && !m.note)) continue;
-    // 完全相同 → 跳過
+    // 完全相同(POS + note 都一樣)→ 跳過
     if (current.some(c => c.partOfSpeech === m.partOfSpeech && c.note === m.note)) continue;
-    // 同詞性但意思不同 → 在原本意思後面接上(用 / 分隔)
-    const samePOS = current.find(c => c.partOfSpeech === m.partOfSpeech);
-    if (samePOS && m.note && !samePOS.note.includes(m.note)) {
-      samePOS.note = samePOS.note ? `${samePOS.note} / ${m.note}` : m.note;
-      added++;
-    } else if (!samePOS) {
-      current.push({ partOfSpeech: m.partOfSpeech || "", note: m.note || "" });
-      added++;
-    }
+    // 否則就加為新的一筆(允許同詞性多意思,顯示時會自動編號 ①②③)
+    current.push({ partOfSpeech: m.partOfSpeech || "", note: m.note || "" });
+    added++;
   }
   existing.quickMeanings = current;
-  // 清掉舊 schema 欄位(用新陣列替代)
   delete existing.quickPartOfSpeech;
   delete existing.quickNote;
   return added;
@@ -286,6 +319,31 @@ function parseTagsInput(text) {
   return dedupeTags(text.split(/[,,、;;]/));
 }
 
+// 把 note 字串用「分號」拆成多個意思(同詞性的不同意思)
+// 「; 」「;」「; 」「;」(中英文分號) 都認得
+// 頓號「、」不拆 — 它是同義詞分隔符
+function splitNoteIntoSenses(note) {
+  if (!note) return [];
+  return note.split(/\s*[;;]\s*/).map(s => s.trim()).filter(Boolean);
+}
+
+// 展開 meanings:把 note 含 ; 的拆成多筆同詞性的 meaning
+function expandSensesInMeanings(meanings) {
+  if (!Array.isArray(meanings)) return [];
+  const expanded = [];
+  for (const m of meanings) {
+    const senses = splitNoteIntoSenses(m.note);
+    if (senses.length <= 1) {
+      expanded.push({ partOfSpeech: m.partOfSpeech || "", note: (m.note || "").trim() });
+    } else {
+      for (const s of senses) {
+        expanded.push({ partOfSpeech: m.partOfSpeech || "", note: s });
+      }
+    }
+  }
+  return expanded;
+}
+
 // 解析批次貼上的一行單字
 // 回傳 { word, meanings: [{partOfSpeech, note}, ...] }
 function parseBulkLine(line) {
@@ -296,7 +354,8 @@ function parseBulkLine(line) {
   // 找到第一個 ( 或 [,前面當作 word
   const firstParen = line.search(/[\(\[]/);
   if (firstParen > 0) {
-    const word = line.slice(0, firstParen).trim().replace(/[|||—–::==\t\s]+$/, "").trim();
+    // 詞尾的分隔符全部砍掉(包括逗號、頓號等)
+    const word = line.slice(0, firstParen).trim().replace(/[|||—–::==,,、\t\s]+$/, "").trim();
     const rest = line.slice(firstParen);
     if (word) {
       const chunks = [];
@@ -304,21 +363,25 @@ function parseBulkLine(line) {
       let m;
       while ((m = re.exec(rest)) !== null) {
         const pos = m[1].trim();
-        const note = (m[2] || "").trim().replace(/^[|||—–::==、,]+\s*/, "");
+        // 把詞性後的逗號等分隔符吃掉,只留意思
+        const note = (m[2] || "").trim().replace(/^[|||—–::==,,、]+\s*/, "");
         if (pos || note) chunks.push({ partOfSpeech: pos, note });
       }
       if (chunks.length > 0) {
-        return { word, meanings: chunks };
+        return { word, meanings: expandSensesInMeanings(chunks) };
       }
     }
   }
 
-  // Pattern 2: word | POS | meaning — 三段式
-  const parts = line.split(/\s*[|||—–::==\t]\s*/);
+  // Pattern 2: word | POS | meaning — 三段式(逗號也能當分隔)
+  const parts = line.split(/\s*[|||—–::==,,\t]\s*/);
   if (parts.length >= 3) {
     return {
       word: parts[0].trim(),
-      meanings: [{ partOfSpeech: parts[1].trim(), note: parts.slice(2).join(" ").trim() }]
+      meanings: expandSensesInMeanings([{
+        partOfSpeech: parts[1].trim(),
+        note: parts.slice(2).join(" ").trim()
+      }])
     };
   }
 
@@ -326,7 +389,10 @@ function parseBulkLine(line) {
   if (parts.length === 2) {
     return {
       word: parts[0].trim(),
-      meanings: [{ partOfSpeech: "", note: parts[1].trim() }]
+      meanings: expandSensesInMeanings([{
+        partOfSpeech: "",
+        note: parts[1].trim()
+      }])
     };
   }
 
@@ -446,26 +512,21 @@ function renderList() {
 
     if (src === "claude" && w.explanation) {
       metaLine = `<span>${w.language}</span>${w.explanation.pronunciation ? ` · <span>${escapeHtml(w.explanation.pronunciation)}</span>` : ""} · <span class="source-tag claude">✨ Claude</span>`;
-      const meanings = w.explanation.meanings || [];
-      meaningsHtml = meanings.map(m => {
-        const pos = m.partOfSpeech
-          ? `<span class="pos-inline">${escapeHtml(formatPOS(m.partOfSpeech))}</span>`
-          : "";
-        const trans = (m.chineseTranslations || []).join("、");
-        return `<div class="word-translation">${pos}${escapeHtml(trans)}</div>`;
-      }).join("");
+      const raw = (w.explanation.meanings || []).map(m => ({
+        partOfSpeech: m.partOfSpeech,
+        text: (m.chineseTranslations || []).join("、")
+      }));
+      const groups = groupMeaningsByPOS(raw);
+      meaningsHtml = groups.map(renderPOSGroup).join("");
     } else {
       metaLine = `<span>${w.language}</span> · <span class="source-tag manual">✏️ 快速</span>`;
-      const meanings = getQuickMeanings(w);
-      if (meanings.length === 0) {
+      const qm = getQuickMeanings(w);
+      if (qm.length === 0) {
         meaningsHtml = `<div class="word-translation muted">尚未解釋,點開可請 Claude 升級</div>`;
       } else {
-        meaningsHtml = meanings.map(m => {
-          const pos = m.partOfSpeech
-            ? `<span class="pos-inline">${escapeHtml(formatPOS(m.partOfSpeech))}</span>`
-            : "";
-          return `<div class="word-translation">${pos}${escapeHtml(m.note || "")}</div>`;
-        }).join("");
+        const raw = qm.map(m => ({ partOfSpeech: m.partOfSpeech, text: m.note || "" }));
+        const groups = groupMeaningsByPOS(raw);
+        meaningsHtml = groups.map(renderPOSGroup).join("");
       }
     }
 
@@ -600,15 +661,14 @@ document.getElementById("edit-form").addEventListener("submit", e => {
   w.status = newStatus;
   w.tags = parseTagsInput(document.getElementById("edit-tags").value);
   if (wordSource(w) === "manual") {
-    // 從多列收集所有詞性 + 意思
+    // 從多列收集所有詞性 + 意思,且把 note 含 ; 的也展開
     const meanings = [];
     document.querySelectorAll("#edit-meanings-rows .meaning-row").forEach(row => {
       const pos = row.querySelector(".meaning-row-pos").value.trim();
       const note = row.querySelector(".meaning-row-note").value.trim();
       if (pos || note) meanings.push({ partOfSpeech: pos, note });
     });
-    w.quickMeanings = meanings;
-    // 清掉舊 schema 欄位
+    w.quickMeanings = expandSensesInMeanings(meanings);
     delete w.quickPartOfSpeech;
     delete w.quickNote;
   }
@@ -843,7 +903,9 @@ document.getElementById("add-form-quick").addEventListener("submit", e => {
     return;
   }
 
-  const record = newQuickWordRecord(word, language, note, pos, tags);
+  // 用 ; 展開「同詞性、不同意思」
+  const meanings = expandSensesInMeanings([{ partOfSpeech: pos, note }]);
+  const record = newQuickWordRecord(word, language, meanings, null, tags);
   state.words.unshift(record);
   saveWords(state.words);
   if (typeof fbIsSignedIn === "function" && fbIsSignedIn()) {
@@ -1191,19 +1253,27 @@ function renderWordDetail(record) {
   // 手動快速新增的單字:顯示所有意思 + 升級按鈕
   if (wordSource(record) === "manual") {
     const meanings = getQuickMeanings(record);
-    const meaningsBlock = meanings.length === 0
-      ? `<div class="detail-section"><p class="muted">這個字目前還沒有解釋。</p></div>`
-      : `
-        <div class="detail-section">
-          <h3>我的筆記</h3>
-          ${meanings.map(m => {
-            const pos = m.partOfSpeech
-              ? `<span class="pos-inline">${escapeHtml(formatPOS(m.partOfSpeech))}</span>`
-              : "";
-            return `<div class="quick-note">${pos}${escapeHtml(m.note || "(無筆記)")}</div>`;
-          }).join("")}
-        </div>
-      `;
+    let meaningsBlock;
+    if (meanings.length === 0) {
+      meaningsBlock = `<div class="detail-section"><p class="muted">這個字目前還沒有解釋。</p></div>`;
+    } else {
+      // 依 POS 分組,同 POS 多意思編號
+      const raw = meanings.map(m => ({ partOfSpeech: m.partOfSpeech, text: m.note || "" }));
+      const groups = groupMeaningsByPOS(raw);
+      const blocksHtml = groups.map(g => {
+        const pos = g.partOfSpeech
+          ? `<span class="pos-inline">${escapeHtml(formatPOS(g.partOfSpeech))}</span>`
+          : "";
+        if (g.senses.length <= 1) {
+          return `<div class="quick-note">${pos}${escapeHtml(g.senses[0] || "(無筆記)")}</div>`;
+        }
+        const sensesHtml = g.senses.map((s, i) =>
+          `<div class="sense-item"><span class="sense-num">${senseNumeral(i)}</span>${escapeHtml(s)}</div>`
+        ).join("");
+        return `<div class="quick-note">${pos}<div class="senses-list">${sensesHtml}</div></div>`;
+      }).join("");
+      meaningsBlock = `<div class="detail-section"><h3>我的筆記</h3>${blocksHtml}</div>`;
+    }
 
     return `
       <div class="word-detail manual-word">
@@ -1229,13 +1299,35 @@ function renderWordDetail(record) {
   }
 
   const e = record.explanation;
-  const meaningsHtml = (e.meanings || []).map(m => `
-    <div class="meaning-block">
-      <div class="pos-tag">${escapeHtml(formatPOS(m.partOfSpeech))}</div>
-      <div class="chinese-translations">${escapeHtml((m.chineseTranslations || []).join("、"))}</div>
-      <div class="english-def">${escapeHtml(m.englishDefinition || "")}</div>
-    </div>
-  `).join("");
+  // 把同 POS 的多筆 meaning 編號顯示
+  const meaningsByPOS = [];
+  for (const m of (e.meanings || [])) {
+    const pos = m.partOfSpeech || "";
+    let g = meaningsByPOS.find(x => x.partOfSpeech === pos);
+    if (!g) {
+      g = { partOfSpeech: pos, items: [] };
+      meaningsByPOS.push(g);
+    }
+    g.items.push(m);
+  }
+  const meaningsHtml = meaningsByPOS.map(g => {
+    const showNumber = g.items.length > 1;
+    const itemsHtml = g.items.map((m, i) => `
+      <div class="sense-block">
+        ${showNumber ? `<span class="sense-num">${senseNumeral(i)}</span>` : ""}
+        <div class="sense-content">
+          <div class="chinese-translations">${escapeHtml((m.chineseTranslations || []).join("、"))}</div>
+          <div class="english-def">${escapeHtml(m.englishDefinition || "")}</div>
+        </div>
+      </div>
+    `).join("");
+    return `
+      <div class="meaning-block">
+        <div class="pos-tag">${escapeHtml(formatPOS(g.partOfSpeech))}</div>
+        ${itemsHtml}
+      </div>
+    `;
+  }).join("");
 
   const examplesHtml = (e.examples || []).map(ex => `
     <div class="example">
