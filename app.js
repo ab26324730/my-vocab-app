@@ -186,6 +186,7 @@ const POS_LABELS = {
   "aux.": "助動詞 aux.", "aux": "助動詞 aux.",
   "art.": "冠詞 art.", "art": "冠詞 art.",
   "num.": "數詞 num.", "num": "數詞 num.",
+  "phr.": "片語 phr.", "phr": "片語 phr.",
   // 英文全寫
   "noun": "名詞 n.",
   "verb": "動詞 v.",
@@ -195,6 +196,7 @@ const POS_LABELS = {
   "conjunction": "連接詞 conj.",
   "pronoun": "代名詞 pron.",
   "interjection": "感嘆詞 interj.",
+  "phrase": "片語 phr.",
   // 中文 → 加縮寫
   "名詞": "名詞 n.",
   "動詞": "動詞 v.",
@@ -212,6 +214,7 @@ const POS_LABELS = {
   "助動詞": "助動詞 aux.",
   "冠詞": "冠詞 art.",
   "數詞": "數詞 num.",
+  "片語": "片語 phr.",
 };
 
 // 同 POS 多筆 meaning 時用 ①②③ 編號
@@ -995,14 +998,21 @@ const POS_OPTIONS = [
   { value: "助動詞", label: "助動詞 aux." },
   { value: "冠詞", label: "冠詞 art." },
   { value: "數詞", label: "數詞 num." },
+  { value: "片語", label: "片語 phr." },
 ];
 
+function posSelectOptionsHTML(selected = "") {
+  return POS_OPTIONS.map(o =>
+    `<option value="${escapeAttr(o.value)}"${o.value === selected ? " selected" : ""}>${escapeHtml(o.label)}</option>`
+  ).join("");
+}
+
 function buildBulkPOSSelect(selected = "") {
-  return `<select class="bulk-pos">
-    ${POS_OPTIONS.map(o =>
-      `<option value="${escapeAttr(o.value)}"${o.value === selected ? " selected" : ""}>${escapeHtml(o.label)}</option>`
-    ).join("")}
-  </select>`;
+  return `<select class="bulk-pos">${posSelectOptionsHTML(selected)}</select>`;
+}
+
+function populatePOSSelect(selectEl, selected = "") {
+  if (selectEl) selectEl.innerHTML = posSelectOptionsHTML(selected);
 }
 
 function addBulkRow(word = "", pos = "", meaning = "", focus = true) {
@@ -2091,6 +2101,7 @@ recordUsage = function(usage, model) {
 renderList();
 updateSyncUI();
 renderTagSuggestions("claude-tag-suggestions", "new-tags");
+populatePOSSelect(document.getElementById("quick-pos"));
 fbInit(); // 如果有 config 就會初始化並監聽 auth 狀態
 
 // 第一次使用 → 自動開設定

@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>我的背單字 APP</title>
-  <link rel="stylesheet" href="style.css?v=20251219f">
+  <link rel="stylesheet" href="style.css?v=20251219g">
 </head>
 <body>
   <header>
@@ -103,7 +103,7 @@
           </div>
           <div>
             <label>詞性(選填)</label>
-            <input type="text" id="quick-pos" placeholder="例:n. / v. / adj." autocomplete="off">
+            <select id="quick-pos"></select>
           </div>
         </div>
         <div class="form-row">
@@ -454,9 +454,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
   <!-- 改版時把 v=YYYYMMDDx 的字母遞增,強迫手機重新載入(避免快取卡舊版)-->
-  <script src="config.js?v=20251219f"></script>
-  <script src="claude.js?v=20251219f"></script>
-  <script src="firebase-sync.js?v=20251219f"></script>
-  <script src="app.js?v=20251219f"></script>
+  <script src="config.js?v=20251219g"></script>
+  <script src="claude.js?v=20251219g"></script>
+  <script src="firebase-sync.js?v=20251219g"></script>
+  <script src="app.js?v=20251219g"></script>
 </body>
 </html>
