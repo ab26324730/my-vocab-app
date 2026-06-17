@@ -261,7 +261,7 @@ function groupMeaningsByPOS(meanings) {
   return groups;
 }
 
-// 渲染一個 POS group(卡片用,簡短)
+// 渲染一個 POS group(卡片用,簡短)— 舊版,保留以免有別處呼叫
 function renderPOSGroup(group) {
   const pos = group.partOfSpeech
     ? `<span class="pos-inline">${escapeHtml(formatPOS(group.partOfSpeech))}</span>`
@@ -269,11 +269,41 @@ function renderPOSGroup(group) {
   if (group.senses.length <= 1) {
     return `<div class="word-translation">${pos}${escapeHtml(group.senses[0] || "")}</div>`;
   }
-  // 多意思:每個編號獨立一行
   const sensesHtml = group.senses.map((s, i) =>
     `<div class="sense-item"><span class="sense-num">${senseNumeral(i)}</span>${escapeHtml(s)}</div>`
   ).join("");
   return `<div class="meaning-group">${pos}<div class="senses-list">${sensesHtml}</div></div>`;
+}
+
+// 渲染整張卡片的所有 POS groups,確保視覺對齊
+//   - 全部 groups 都 1 意思 → 用簡單 inline 排版
+//   - 至少有一個 group 多意思 → 全部用結構化排版,1 意思的 group 用透明 ① 佔位
+function renderCardMeanings(groups) {
+  if (!groups || groups.length === 0) return "";
+  const anyMulti = groups.some(g => g.senses.length > 1);
+
+  if (!anyMulti) {
+    return groups.map(g => {
+      const pos = g.partOfSpeech
+        ? `<span class="pos-inline">${escapeHtml(formatPOS(g.partOfSpeech))}</span>`
+        : "";
+      return `<div class="word-translation">${pos}${escapeHtml(g.senses[0] || "")}</div>`;
+    }).join("");
+  }
+
+  // 有多意思 → 全部用結構化排版,1 意思的用透明 ① 對齊
+  return groups.map(g => {
+    const pos = g.partOfSpeech
+      ? `<span class="pos-inline">${escapeHtml(formatPOS(g.partOfSpeech))}</span>`
+      : "";
+    const showNums = g.senses.length > 1;
+    const sensesHtml = g.senses.map((s, i) => {
+      const numClass = showNums ? "sense-num" : "sense-num placeholder";
+      const numChar = showNums ? senseNumeral(i) : "①";
+      return `<div class="sense-item"><span class="${numClass}">${numChar}</span>${escapeHtml(s)}</div>`;
+    }).join("");
+    return `<div class="meaning-group">${pos}<div class="senses-list">${sensesHtml}</div></div>`;
+  }).join("");
 }
 
 function formatPOS(pos) {
@@ -548,7 +578,6 @@ function renderList() {
 
     if (src === "claude" && w.explanation) {
       metaLine = `<span>${w.language}</span>${w.explanation.pronunciation ? ` · <span>${escapeHtml(w.explanation.pronunciation)}</span>` : ""} · <span class="source-tag claude">✨ Claude</span>`;
-      // 用 getMeaningSenses 統一新舊 schema
       const raw = [];
       for (const m of (w.explanation.meanings || [])) {
         for (const sense of getMeaningSenses(m)) {
@@ -556,7 +585,7 @@ function renderList() {
         }
       }
       const groups = groupMeaningsByPOS(raw);
-      meaningsHtml = groups.map(renderPOSGroup).join("");
+      meaningsHtml = renderCardMeanings(groups);
     } else {
       metaLine = `<span>${w.language}</span> · <span class="source-tag manual">✏️ 快速</span>`;
       const qm = getQuickMeanings(w);
@@ -565,7 +594,7 @@ function renderList() {
       } else {
         const raw = qm.map(m => ({ partOfSpeech: m.partOfSpeech, text: m.note || "" }));
         const groups = groupMeaningsByPOS(raw);
-        meaningsHtml = groups.map(renderPOSGroup).join("");
+        meaningsHtml = renderCardMeanings(groups);
       }
     }
 
@@ -579,11 +608,9 @@ function renderList() {
         <div class="word-card-top">
           <div class="word-text">${escapeHtml(w.word)}</div>
           <span class="status-badge ${w.status}">${statusLabel}</span>
-        </div>
-        <div class="word-meta-line">
-          <div class="word-meta">${metaLine}</div>
           <button class="edit-btn" data-id="${w.id}" title="編輯">✏️</button>
         </div>
+        <div class="word-meta">${metaLine}</div>
         <div class="word-body">
           ${meaningsHtml}
           ${tagsHtml}
