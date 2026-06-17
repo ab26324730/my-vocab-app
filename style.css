@@ -1370,7 +1370,10 @@ main {
 .dataset-row {
   background: var(--card-bg);
   border-radius: 10px;
-  padding: 12px 12px 12px 0;
+  padding-top: 12px;
+  padding-right: 12px;
+  padding-bottom: 12px;
+  padding-left: calc(var(--row-depth, 0) * 18px + 12px);
   box-shadow: var(--shadow);
   display: flex;
   align-items: center;
@@ -1686,12 +1689,107 @@ main {
 
 /* ===== 響應式 ===== */
 @media (max-width: 600px) {
-  header { padding: 16px 16px 0; }
+  /* Header */
+  header { padding: 14px 14px 0; }
   header h1 { font-size: 20px; }
-  main { padding: 16px; }
-  .card-word { font-size: 36px; }
+  .header-icon-btn { width: 34px; height: 34px; font-size: 16px; }
+
+  /* Main */
+  main { padding: 14px; }
+
+  /* Nav tabs — 5 個 tab 在窄螢幕的處理 */
+  nav { gap: 0; }
+  .tab-btn { padding: 11px 2px; font-size: 12px; letter-spacing: 0; }
+
+  /* 篩選列 */
+  .filter-bar { gap: 6px; }
+  .filter-btn { padding: 6px 10px; font-size: 13px; }
+  .filter-btn .count { padding: 1px 6px; font-size: 11px; }
+
+  /* Tag 麵包屑與 chip */
+  .tag-breadcrumb { font-size: 12px; padding: 5px 8px; }
+  .tag-bc-item { padding: 2px 5px; }
+  .tag-bc-sep { font-size: 11px; }
+  .tag-chip { font-size: 12px; padding: 3px 9px; }
+
+  /* 單字卡 */
+  .word-card { padding: 12px 12px; gap: 6px; }
+  .word-text { font-size: 18px; }
+  .word-meta { font-size: 12px; flex-wrap: wrap; }
+  .word-translation { font-size: 13px; line-height: 1.55; }
+  .word-translation .pos-inline { font-size: 10px; padding: 1px 6px; margin-right: 4px; }
+  .status-badge { font-size: 11px; padding: 3px 7px; }
+  .card-actions { flex-direction: column; gap: 0; }
+  .edit-btn { font-size: 13px; padding: 3px 5px; }
+  .delete-btn { font-size: 18px; padding: 3px 5px; }
+  .word-tags .tag-chip { font-size: 10px; padding: 1px 7px; }
+
+  /* 詳細頁 */
+  .modal { padding: 8px; }
+  .modal-content { max-height: 92vh; }
+  #modal-body { padding: 18px 16px; }
   .detail-word { font-size: 26px; }
+  .detail-tags { font-size: 12px; padding: 8px 10px; flex-wrap: wrap; }
+  .meaning-block { padding: 10px 12px; }
+  .sense-block .sense-num { font-size: 15px; }
+  .chinese-translations { font-size: 15px; }
+  .english-def { font-size: 12px; }
+  .example { padding: 10px 12px; }
+  .example-sentence { font-size: 14px; }
+  .example-translation { font-size: 13px; }
+  .nuance { padding: 12px 14px; font-size: 13px; }
+
+  /* 編號 sense */
+  .sense-num { font-size: 12px; }
+  .meaning-group { gap: 6px; }
+
+  /* 新增表單 */
+  .add-mode-btn { padding: 9px 4px; font-size: 13px; }
+  #bulk-text { min-height: 200px; font-size: 13px; padding: 10px; line-height: 1.6; }
+  .form-row input, .form-row select { font-size: 16px; }  /* 16px 避免 iOS Safari 縮放 */
+  .form-row-split { grid-template-columns: 1fr; gap: 10px; }
+
+  /* 複習卡 */
+  .card-word { font-size: 32px; }
+  .flashcard { padding: 32px 20px; min-height: 240px; }
+
+  /* 統計 */
   .stats-grid { grid-template-columns: 1fr; }
-  .stat-value { font-size: 24px; }
-  .tab-btn { padding: 12px 0; font-size: 13px; }
+  .stat-value { font-size: 22px; }
+
+  /* 資料集 tab */
+  .dataset-row {
+    padding-top: 10px;
+    padding-right: 8px;
+    padding-bottom: 10px;
+    padding-left: calc(var(--row-depth, 0) * 10px + 8px);
+    gap: 4px;
+  }
+  .dataset-name { font-size: 14px; margin-bottom: 3px; }
+  .dataset-stats { font-size: 11px; margin-bottom: 4px; }
+  .dataset-progress { gap: 6px; }
+  .dataset-go { width: 30px; height: 30px; font-size: 14px; }
+  .progress-text { min-width: 28px; font-size: 11px; }
+  .progress-bar { height: 6px; }
+  .dataset-intro { font-size: 12px; padding: 10px 12px; }
+  .dataset-expand, .dataset-expand-placeholder { width: 20px; height: 20px; font-size: 11px; }
+
+  /* 設定 modal */
+  .settings-body { padding: 18px 16px; }
+  .settings-actions { flex-direction: column-reverse; gap: 8px; }
+  .settings-actions button { width: 100%; }
+  #firebase-config-text { font-size: 11px; min-height: 120px; }
+  .sync-section h3 { font-size: 13px; }
+
+  /* 編輯 modal 的詞性多列編輯 */
+  .meaning-row { grid-template-columns: 90px 1fr 32px; gap: 6px; }
+  .meaning-row input { font-size: 13px; padding: 7px 8px; }
+}
+
+/* 更小的螢幕(< 380px)再瘦身 */
+@media (max-width: 380px) {
+  .tab-btn { font-size: 11px; padding: 10px 1px; }
+  .add-mode-btn { font-size: 12px; padding: 8px 2px; }
+  .word-text { font-size: 17px; }
+  .filter-btn { padding: 5px 8px; font-size: 12px; }
 }

@@ -118,8 +118,13 @@ function _startWatching() {
         const words = [];
         snapshot.forEach(d => {
           const data = d.data();
-          // Firestore 不能儲存 undefined,把 server timestamp 剝掉避免 round-trip 改變內容
-          delete data._syncedAt;
+          // 保留 _syncedAt 當作「曾經在雲端過」的標記(轉成數字才能存到 localStorage)
+          if (data._syncedAt && typeof data._syncedAt.toMillis === "function") {
+            data._syncedAt = data._syncedAt.toMillis();
+          } else if (!data._syncedAt) {
+            // 沒拿到 server timestamp(剛 push 還沒 ack),給它一個本機時間佔位
+            data._syncedAt = Date.now();
+          }
           words.push(data);
         });
         if (_onRemoteWords) {
@@ -141,7 +146,9 @@ function _startWatching() {
       doc => {
         if (!doc.exists) return;
         const data = doc.data();
-        delete data._syncedAt;
+        if (data._syncedAt && typeof data._syncedAt.toMillis === "function") {
+          data._syncedAt = data._syncedAt.toMillis();
+        }
         if (_onRemoteMeta) {
           _applyingRemote = true;
           try {

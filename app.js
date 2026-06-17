@@ -1582,14 +1582,13 @@ function renderDatasetNode(node, depth) {
 
 function renderDatasetCard(title, counts, path, depth, hasKids, isAll) {
   const percent = counts.all > 0 ? Math.round((counts.known / counts.all) * 100) : 0;
-  const indent = `style="padding-left:${depth * 18 + 12}px;"`;
   const expandBtn = hasKids
     ? `<button class="dataset-expand" title="展開/收合">▼</button>`
     : `<span class="dataset-expand-placeholder"></span>`;
   const allClass = isAll ? " all" : "";
 
   return `
-    <div class="dataset-row${allClass}" ${indent}>
+    <div class="dataset-row${allClass}" style="--row-depth:${depth}">
       ${expandBtn}
       <div class="dataset-info">
         <div class="dataset-name">${escapeHtml(title)}</div>
@@ -1930,15 +1929,17 @@ document.getElementById("sync-upload-local").addEventListener("click", async () 
 // 設定遠端事件回呼
 fbSetCallbacks({
   onWords: remoteWords => {
-    // 用 id 去重合併:遠端為主,本機 _usage 等臨時欄位保留
+    // 用 id 比對。對於「本機有但遠端沒有」的字:
+    //   - 有 _syncedAt(曾在雲端)→ 是被別台刪除的,本機也要刪
+    //   - 沒 _syncedAt(尚未推上雲端的新字)→ 保留
     const remoteIds = new Set(remoteWords.map(w => w.id));
-    const localOnly = state.words.filter(w => !remoteIds.has(w.id));
-    state.words = [...remoteWords, ...localOnly];
-    // 排序保持一致(最新加入優先)
+    const localUnsynced = state.words.filter(w => !remoteIds.has(w.id) && !w._syncedAt);
+    state.words = [...remoteWords, ...localUnsynced];
     state.words.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     saveWords(state.words);
     if (state.currentTab === "list") renderList();
     if (state.currentTab === "stats") renderStats();
+    if (state.currentTab === "datasets") renderDatasets();
   },
   onMeta: remoteStats => {
     // 統計取大值(避免遠端比本機舊時倒退)
