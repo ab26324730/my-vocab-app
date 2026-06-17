@@ -181,14 +181,13 @@ main {
 .word-card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 14px 16px;
   box-shadow: var(--shadow);
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .word-card:hover {
@@ -196,32 +195,47 @@ main {
   box-shadow: var(--shadow-lg);
 }
 
-.word-card .word-info {
-  flex: 1;
-  min-width: 0;
+.word-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .word-card .word-text {
+  flex: 1;
+  min-width: 0;
   font-size: 20px;
   font-weight: 600;
-  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .word-card .word-meta {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-light);
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
+  line-height: 1.5;
+}
+
+.word-card .word-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .word-card .word-translation {
   font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+  /* 允許中文自然換行,不再截斷 */
+}
+
+.word-card .word-translation.muted {
   color: var(--text-light);
-  margin-top: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .status-badge {
@@ -241,6 +255,12 @@ main {
   gap: 2px;
   align-items: center;
   flex-shrink: 0;
+  flex-direction: row;
+}
+
+.status-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .edit-btn,
@@ -1713,15 +1733,14 @@ main {
   .tag-chip { font-size: 12px; padding: 3px 9px; }
 
   /* 單字卡 */
-  .word-card { padding: 12px 12px; gap: 6px; }
-  .word-text { font-size: 18px; }
-  .word-meta { font-size: 12px; flex-wrap: wrap; }
-  .word-translation { font-size: 13px; line-height: 1.55; }
-  .word-translation .pos-inline { font-size: 10px; padding: 1px 6px; margin-right: 4px; }
-  .status-badge { font-size: 11px; padding: 3px 7px; }
-  .card-actions { flex-direction: column; gap: 0; }
-  .edit-btn { font-size: 13px; padding: 3px 5px; }
-  .delete-btn { font-size: 18px; padding: 3px 5px; }
+  .word-card { padding: 12px 14px; gap: 5px; }
+  .word-card .word-text { font-size: 18px; }
+  .word-card .word-meta { font-size: 11px; gap: 4px; }
+  .word-card .word-translation { font-size: 13px; line-height: 1.55; }
+  .word-card .word-translation .pos-inline { font-size: 10px; padding: 1px 6px; margin-right: 4px; }
+  .status-badge { font-size: 11px; padding: 2px 7px; }
+  .edit-btn { font-size: 13px; padding: 4px 6px; }
+  .delete-btn { font-size: 17px; padding: 4px 6px; }
   .word-tags .tag-chip { font-size: 10px; padding: 1px 7px; }
 
   /* 詳細頁 */

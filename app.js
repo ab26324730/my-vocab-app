@@ -289,14 +289,17 @@ function formatPOS(pos) {
 
 // 取得單字所有意思(統一格式回傳 [{partOfSpeech, note}, ...])
 function getQuickMeanings(w) {
+  let raw;
   if (Array.isArray(w.quickMeanings) && w.quickMeanings.length > 0) {
-    return w.quickMeanings;
+    raw = w.quickMeanings;
+  } else if (w.quickPartOfSpeech || w.quickNote) {
+    // 向後相容舊資料(quickPartOfSpeech / quickNote 單欄)
+    raw = [{ partOfSpeech: w.quickPartOfSpeech || "", note: w.quickNote || "" }];
+  } else {
+    return [];
   }
-  // 向後相容舊資料
-  if (w.quickPartOfSpeech || w.quickNote) {
-    return [{ partOfSpeech: w.quickPartOfSpeech || "", note: w.quickNote || "" }];
-  }
-  return [];
+  // 顯示時也展開 — 即使存進去時沒拆,顯示一律拆;支援半形/全形 ;
+  return expandSensesInMeanings(raw);
 }
 
 // 把多個意思合併到既有單字中(同詞性的不同意思也會各自保留為一筆)
@@ -343,12 +346,21 @@ function parseTagsInput(text) {
   return dedupeTags(text.split(/[,,、;;]/));
 }
 
+// ----- 中英文分隔符常數 -----
+// 半形 ; (U+003B) + 全形 ; (U+FF1B) — 拆「不同意思」用
+const SEP_SENSE = /\s*[;；]\s*/;
+// 半形/全形 | : = , — – 與 Tab — 拆「word | POS | meaning」用
+const SEP_FIELDS = /\s*[|｜:：=＝,，—–\t]\s*/;
+// 詞尾要剝除的標點(連同上面那些,加上頓號、空白)
+const TRAILING_SEPS = /[|｜:：=＝,，—–、;；\t\s]+$/;
+// 意思的開頭要剝除的標點
+const LEADING_SEPS = /^[|｜:：=＝,，—–、;；]+\s*/;
+
 // 把 note 字串用「分號」拆成多個意思(同詞性的不同意思)
-// 「; 」「;」「; 」「;」(中英文分號) 都認得
-// 頓號「、」不拆 — 它是同義詞分隔符
+// 半形 ; 與全形 ; 都認得;頓號「、」不拆(它是同義詞分隔符)
 function splitNoteIntoSenses(note) {
   if (!note) return [];
-  return note.split(/\s*[;;]\s*/).map(s => s.trim()).filter(Boolean);
+  return note.split(SEP_SENSE).map(s => s.trim()).filter(Boolean);
 }
 
 // 展開 meanings:把 note 含 ; 的拆成多筆同詞性的 meaning
@@ -378,8 +390,8 @@ function parseBulkLine(line) {
   // 找到第一個 ( 或 [,前面當作 word
   const firstParen = line.search(/[\(\[]/);
   if (firstParen > 0) {
-    // 詞尾的分隔符全部砍掉(包括逗號、頓號等)
-    const word = line.slice(0, firstParen).trim().replace(/[|||—–::==,,、\t\s]+$/, "").trim();
+    // 詞尾的分隔符全部砍掉(包括半形/全形 , : | 等)
+    const word = line.slice(0, firstParen).trim().replace(TRAILING_SEPS, "").trim();
     const rest = line.slice(firstParen);
     if (word) {
       const chunks = [];
@@ -387,8 +399,8 @@ function parseBulkLine(line) {
       let m;
       while ((m = re.exec(rest)) !== null) {
         const pos = m[1].trim();
-        // 把詞性後的逗號等分隔符吃掉,只留意思
-        const note = (m[2] || "").trim().replace(/^[|||—–::==,,、]+\s*/, "");
+        // 把詞性後的分隔符(半形/全形 , : 等)吃掉,只留意思
+        const note = (m[2] || "").trim().replace(LEADING_SEPS, "");
         if (pos || note) chunks.push({ partOfSpeech: pos, note });
       }
       if (chunks.length > 0) {
@@ -397,8 +409,8 @@ function parseBulkLine(line) {
     }
   }
 
-  // Pattern 2: word | POS | meaning — 三段式(逗號也能當分隔)
-  const parts = line.split(/\s*[|||—–::==,,\t]\s*/);
+  // Pattern 2: word | POS | meaning — 三段式(半形/全形 , | : = — 都能分隔)
+  const parts = line.split(SEP_FIELDS);
   if (parts.length >= 3) {
     return {
       word: parts[0].trim(),
@@ -563,16 +575,18 @@ function renderList() {
     const statusLabel = { new: "未複習", known: "已會", unknown: "不會" }[w.status];
     return `
       <div class="word-card" data-id="${w.id}">
-        <div class="word-info">
+        <div class="word-card-top">
           <div class="word-text">${escapeHtml(w.word)}</div>
-          <div class="word-meta">${metaLine}</div>
+          <span class="status-badge ${w.status}">${statusLabel}</span>
+          <div class="card-actions">
+            <button class="edit-btn" data-id="${w.id}" title="編輯">✏️</button>
+            <button class="delete-btn" data-id="${w.id}" title="刪除">×</button>
+          </div>
+        </div>
+        <div class="word-meta">${metaLine}</div>
+        <div class="word-body">
           ${meaningsHtml}
           ${tagsHtml}
-        </div>
-        <span class="status-badge ${w.status}">${statusLabel}</span>
-        <div class="card-actions">
-          <button class="edit-btn" data-id="${w.id}" title="編輯">✏️</button>
-          <button class="delete-btn" data-id="${w.id}" title="刪除">×</button>
         </div>
       </div>
     `;
