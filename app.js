@@ -245,7 +245,10 @@ function renderList() {
           <div class="word-translation">${escapeHtml(firstTrans)}</div>
         </div>
         <span class="status-badge ${w.status}">${statusLabel}</span>
-        <button class="delete-btn" data-id="${w.id}" title="刪除">×</button>
+        <div class="card-actions">
+          <button class="edit-btn" data-id="${w.id}" title="編輯">✏️</button>
+          <button class="delete-btn" data-id="${w.id}" title="刪除">×</button>
+        </div>
       </div>
     `;
   }).join("");
@@ -253,7 +256,7 @@ function renderList() {
   // 點卡片打開 modal
   listEl.querySelectorAll(".word-card").forEach(card => {
     card.addEventListener("click", e => {
-      if (e.target.classList.contains("delete-btn")) return;
+      if (e.target.closest(".card-actions")) return; // 點到操作按鈕不開 modal
       openWordDetail(card.dataset.id);
     });
   });
@@ -273,7 +276,58 @@ function renderList() {
       }
     });
   });
+
+  // 編輯
+  listEl.querySelectorAll(".edit-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      openEditModal(btn.dataset.id);
+    });
+  });
 }
+
+// ----- 編輯單字(只改名稱與語言,不重新呼叫 API)-----
+function openEditModal(id) {
+  const w = state.words.find(x => x.id === id);
+  if (!w) return;
+  document.getElementById("edit-id").value = id;
+  document.getElementById("edit-word").value = w.word;
+  document.getElementById("edit-language").value = w.language;
+  document.getElementById("edit-status").value = w.status;
+  document.getElementById("edit-modal").style.display = "flex";
+}
+
+function closeEditModal() {
+  document.getElementById("edit-modal").style.display = "none";
+}
+
+document.getElementById("edit-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const id = document.getElementById("edit-id").value;
+  const newWord = document.getElementById("edit-word").value.trim();
+  const newLanguage = document.getElementById("edit-language").value;
+  const newStatus = document.getElementById("edit-status").value;
+
+  if (!newWord) {
+    toast("單字不能空白", "error");
+    return;
+  }
+
+  const w = state.words.find(x => x.id === id);
+  if (!w) return;
+
+  w.word = newWord;
+  w.language = newLanguage;
+  w.status = newStatus;
+  saveWords(state.words);
+  closeEditModal();
+  renderList();
+  toast("已更新", "success");
+});
+
+document.getElementById("edit-cancel").addEventListener("click", closeEditModal);
+document.getElementById("edit-backdrop").addEventListener("click", closeEditModal);
+document.getElementById("edit-close").addEventListener("click", closeEditModal);
 
 // ----- 新增單字 -----
 document.getElementById("add-form").addEventListener("submit", async e => {
@@ -303,14 +357,33 @@ document.getElementById("add-form").addEventListener("submit", async e => {
 
   try {
     const explanation = await fetchWordExplanation(word, language);
-    const record = newWordRecord(word, language, explanation);
-    state.words.unshift(record);
-    saveWords(state.words);
 
-    // 記錄 token 用量
+    // 記錄 token 用量(無論最後是否儲存,API 都已經呼叫了)
     if (explanation._usage) {
       recordUsage(explanation._usage, loadSettings().model);
     }
+
+    // 拼字偵測
+    const tc = explanation.typoCheck;
+    let finalWord = word;
+    if (tc && tc.isLikelyTypo && (tc.confidence === "high" || tc.confidence === "medium") && tc.suggestedSpelling && tc.suggestedSpelling !== word) {
+      const useCorrected = confirm(
+        `⚠️ 拼字偵測\n\n` +
+        `你輸入:${word}\n` +
+        `Claude 建議:${tc.suggestedSpelling}(信心度:${tc.confidence})\n` +
+        `理由:${tc.reason || "(無)"}\n\n` +
+        `以下解釋是 Claude 針對「${tc.suggestedSpelling}」生成的。\n\n` +
+        `按「確定」= 採用 ${tc.suggestedSpelling}\n` +
+        `按「取消」= 仍然儲存原拼字 ${word}(但解釋是 ${tc.suggestedSpelling} 的)`
+      );
+      if (useCorrected) {
+        finalWord = tc.suggestedSpelling;
+      }
+    }
+
+    const record = newWordRecord(finalWord, language, explanation);
+    state.words.unshift(record);
+    saveWords(state.words);
 
     // 顯示預覽
     const preview = document.getElementById("preview-card");
@@ -321,7 +394,7 @@ document.getElementById("add-form").addEventListener("submit", async e => {
     document.getElementById("new-word").value = "";
     document.getElementById("new-word").focus();
 
-    toast(`「${word}」已加入單字本`, "success");
+    toast(`「${finalWord}」已加入單字本`, "success");
   } catch (err) {
     console.error(err);
     toast("錯誤:" + err.message, "error");
@@ -369,7 +442,7 @@ function renderNuance(nuance) {
       <div class="nuance-title">常見搭配</div>
       <ul class="nuance-list">
         ${nuance.collocations.map(c => `
-          <li><code class="collocation">${escapeHtml(c.pattern)}</code><span class="collocation-meaning">${escapeHtml(c.meaning)}</span></li>
+          <li><span class="collocation">${escapeHtml(c.pattern)}</span><span class="collocation-meaning">(${escapeHtml(c.meaning)})</span></li>
         `).join("")}
       </ul>
     </div>

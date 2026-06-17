@@ -152,10 +152,11 @@
         <h3>不同模型的單次查詢估算</h3>
         <table class="stats-table">
           <tr><th>模型</th><th>每次約</th></tr>
-          <tr><td>claude-haiku-4-5</td><td>NT$ 0.05</td></tr>
-          <tr><td>claude-sonnet-4-6</td><td>NT$ 0.15</td></tr>
-          <tr><td>claude-opus-4-8</td><td>NT$ 0.25</td></tr>
+          <tr><td>claude-haiku-4-5</td><td>NT$ 0.30</td></tr>
+          <tr><td>claude-sonnet-4-6</td><td>NT$ 0.90</td></tr>
+          <tr><td>claude-opus-4-8</td><td>NT$ 1.60</td></tr>
         </table>
+        <p class="hint">💡 實際金額看回答長度浮動,以左上「累計花費」為準。</p>
 
         <div class="stats-actions">
           <button id="reset-stats" class="danger-btn">重設統計數字</button>
@@ -171,6 +172,49 @@
     <div class="modal-content">
       <button class="modal-close">×</button>
       <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- 編輯單字 modal -->
+  <div id="edit-modal" class="modal" style="display:none;">
+    <div class="modal-backdrop" id="edit-backdrop"></div>
+    <div class="modal-content settings-content">
+      <button class="modal-close" id="edit-close">×</button>
+      <div class="settings-body">
+        <h2>✏️ 編輯單字</h2>
+        <p class="settings-intro">只改名稱、語言或狀態,<strong>不會重新呼叫 Claude</strong>,不花 token。</p>
+        <form id="edit-form">
+          <input type="hidden" id="edit-id">
+          <div class="form-row">
+            <label for="edit-word">單字</label>
+            <input type="text" id="edit-word" required>
+          </div>
+          <div class="form-row">
+            <label for="edit-language">語言</label>
+            <select id="edit-language" required>
+              <option value="英文">英文</option>
+              <option value="日文">日文</option>
+              <option value="韓文">韓文</option>
+              <option value="法文">法文</option>
+              <option value="德文">德文</option>
+              <option value="西班牙文">西班牙文</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="edit-status">狀態</label>
+            <select id="edit-status" required>
+              <option value="new">未複習</option>
+              <option value="unknown">不會</option>
+              <option value="known">已會</option>
+            </select>
+          </div>
+          <div class="settings-actions">
+            <button type="button" id="edit-cancel" class="ghost-btn">取消</button>
+            <button type="submit" class="primary-btn">儲存</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -202,9 +246,9 @@
           <div class="form-row">
             <label for="settings-model">使用的模型</label>
             <select id="settings-model" required>
-              <option value="claude-haiku-4-5">Haiku 4.5 — 最便宜(約 NT$0.05/次)</option>
-              <option value="claude-sonnet-4-6" selected>Sonnet 4.6 — 推薦(約 NT$0.15/次)</option>
-              <option value="claude-opus-4-8">Opus 4.8 — 最強(約 NT$0.25/次)</option>
+              <option value="claude-haiku-4-5">Haiku 4.5 — 最便宜(約 NT$0.30/次)</option>
+              <option value="claude-sonnet-4-6" selected>Sonnet 4.6 — 品質好(約 NT$0.90/次)</option>
+              <option value="claude-opus-4-8">Opus 4.8 — 最強(約 NT$1.60/次)</option>
             </select>
           </div>
 

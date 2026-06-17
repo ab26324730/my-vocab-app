@@ -8,7 +8,32 @@ const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const WORD_EXPLANATION_SCHEMA = {
   type: "object",
   properties: {
-    word: { type: "string", description: "原單字" },
+    typoCheck: {
+      type: "object",
+      description: "拼字錯誤偵測。若懷疑使用者輸入有錯,建議正確拼法。",
+      properties: {
+        isLikelyTypo: {
+          type: "boolean",
+          description: "使用者的輸入是否疑似拼字錯誤"
+        },
+        suggestedSpelling: {
+          type: "string",
+          description: "若是錯字,建議的正確拼法;否則填使用者原輸入"
+        },
+        confidence: {
+          type: "string",
+          enum: ["high", "medium", "low", "none"],
+          description: "拼錯字判斷的信心度;none = 不是錯字"
+        },
+        reason: {
+          type: "string",
+          description: "簡短說明為什麼這可能是錯字(沒有就填空字串)"
+        }
+      },
+      required: ["isLikelyTypo", "suggestedSpelling", "confidence", "reason"],
+      additionalProperties: false
+    },
+    word: { type: "string", description: "最終以哪個拼字解釋(若有錯字判斷,填正確拼法)" },
     language: { type: "string", description: "單字語言" },
     pronunciation: {
       type: "string",
@@ -96,7 +121,7 @@ const WORD_EXPLANATION_SCHEMA = {
       description: "詞形變化(動詞三態、名詞複數、形容詞比較級等),無變化填「無」"
     }
   },
-  required: ["word", "language", "pronunciation", "meanings", "examples", "nuance", "wordForms"],
+  required: ["typoCheck", "word", "language", "pronunciation", "meanings", "examples", "nuance", "wordForms"],
   additionalProperties: false
 };
 
@@ -109,22 +134,32 @@ async function fetchWordExplanation(word, language) {
     throw new Error("請先到「設定」填入你的 Claude API key");
   }
 
-  const userPrompt = `請詳細解釋這個${language}單字:「${word}」
+  const userPrompt = `請解釋這個${language}單字:「${word}」
 
-請以 ${settings.nativeLanguage} 為母語的學習者為對象,提供以下內容:
+**0. 先判斷是否疑似拼字錯誤(typoCheck)**
+- 仔細看使用者輸入的拼字。若疑似拼錯,設 isLikelyTypo: true,並在 suggestedSpelling 給正確拼法。
+- confidence 分四級:
+  - "high" = 顯然拼錯(如 serindipity → serendipity)
+  - "medium" = 很可能拼錯,但也可能是罕見字
+  - "low" = 微小可能拼錯
+  - "none" = 拼字正確,不是錯字
+- **若懷疑是錯字(high/medium),請以「正確拼法」回答後續所有欄位**(word、meanings、examples 等)
+- reason 簡短說明判斷理由,例如「少一個 e」或「兩字母順序顛倒」
 
-1. **發音**:IPA 音標(日文請給羅馬拼音+假名,韓文給羅馬拼音)
-2. **詞性分類**:若有多個詞性(例如同時是名詞和動詞),分開列出,每個詞性下列出所有對應的中文意思
-3. **英文解釋**:用英文簡短解釋這個字
-4. **3 個例句**:不同情境(日常 / 正式 / 文學等),每句附中文翻譯與情境說明
-5. **語感(分成四部分)**
-   - **coreFeel**:核心語感、感覺、整體形象,可說明字源延伸的意象(一段完整描述)
-   - **synonymDifferences**:列出 2–4 個近義詞,逐一比較細微差別
+請以 ${settings.nativeLanguage} 為母語的學習者為對象,提供:
+
+1. **發音**:IPA 音標(日文給羅馬拼音+假名,韓文給羅馬拼音)
+2. **詞性分類**:若有多個詞性,分開列出,每個詞性下列所有中文意思
+3. **英文解釋**:用英文簡短解釋
+4. **3 個例句**:不同情境(日常 / 正式 / 文學等),附中文翻譯與情境
+5. **語感(分四部分)**
+   - **coreFeel**:核心語感、感覺、整體形象(一段話)
+   - **synonymDifferences**:列出 2–4 個近義詞,逐一比較
    - **collocations**:列出 3–5 個常見搭配或慣用句型,每個附中文意思
    - **culturalContext**:文化背景、使用場合,沒有就填空字串
 6. **詞形變化**:動詞三態、名詞複數、形容詞比較級等,無變化填「無」
 
-請完整、實用,專注在幫助學習者真正掌握這個字的「感覺」。`;
+請完整、實用,專注幫學習者掌握這個字的「感覺」。`;
 
   const requestBody = {
     model: settings.model,

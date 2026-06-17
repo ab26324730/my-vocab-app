@@ -236,15 +236,32 @@ main {
 .status-badge.known { background: #e8f5e9; color: #388e3c; }
 .status-badge.unknown { background: #fce4ec; color: #c2185b; }
 
+.card-actions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.edit-btn,
 .delete-btn {
   background: transparent;
   border: none;
   color: var(--text-light);
   cursor: pointer;
-  font-size: 18px;
-  padding: 4px 8px;
+  font-size: 16px;
+  padding: 6px 8px;
   border-radius: 6px;
   transition: all 0.2s;
+  line-height: 1;
+}
+
+.delete-btn {
+  font-size: 20px;
+}
+
+.edit-btn:hover {
+  background: #e3f2fd;
 }
 
 .delete-btn:hover {
@@ -473,9 +490,10 @@ main {
 }
 
 .nuance-list li {
-  padding: 4px 0 4px 14px;
+  padding: 6px 0 6px 16px;
   position: relative;
   font-size: 14px;
+  line-height: 1.75;
 }
 
 .nuance-list li::before {
@@ -491,20 +509,17 @@ main {
 }
 
 .collocation {
-  background: #fff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-family: "SF Mono", Monaco, Consolas, monospace;
-  font-size: 13px;
-  color: var(--primary-dark);
-  border: 1px solid #c8e6c9;
-  margin-right: 8px;
-  display: inline-block;
-  margin-bottom: 2px;
+  font-weight: 600;
+  font-size: 15px;
+  color: #1b5e20;
+  margin-right: 4px;
+  letter-spacing: 0.2px;
 }
 
 .collocation-meaning {
-  color: var(--text-light);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 400;
 }
 
 .nuance-text {
