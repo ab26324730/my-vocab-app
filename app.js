@@ -275,23 +275,11 @@ function renderPOSGroup(group) {
   return `<div class="meaning-group">${pos}<div class="senses-list">${sensesHtml}</div></div>`;
 }
 
-// 渲染整張卡片的所有 POS groups,確保視覺對齊
-//   - 全部 groups 都 1 意思 → 用簡單 inline 排版
-//   - 至少有一個 group 多意思 → 全部用結構化排版,1 意思的 group 用透明 ① 佔位
+// 渲染整張卡片的所有 POS groups
+// 統一使用結構化排版,確保「跨卡片」視覺對齊
+// 單意思也保留透明 ① 占位,讓 résumé 之類的卡片跟 unwind 之類的卡片中文起點一致
 function renderCardMeanings(groups) {
   if (!groups || groups.length === 0) return "";
-  const anyMulti = groups.some(g => g.senses.length > 1);
-
-  if (!anyMulti) {
-    return groups.map(g => {
-      const pos = g.partOfSpeech
-        ? `<span class="pos-inline">${escapeHtml(formatPOS(g.partOfSpeech))}</span>`
-        : "";
-      return `<div class="word-translation">${pos}${escapeHtml(g.senses[0] || "")}</div>`;
-    }).join("");
-  }
-
-  // 有多意思 → 全部用結構化排版,1 意思的用透明 ① 對齊
   return groups.map(g => {
     const pos = g.partOfSpeech
       ? `<span class="pos-inline">${escapeHtml(formatPOS(g.partOfSpeech))}</span>`

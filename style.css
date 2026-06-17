@@ -232,12 +232,15 @@ main {
 .word-card-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .word-card .word-text {
-  flex: 1;
+  /* 不撐開 — 讓 status 與 edit 緊跟在單字旁邊,而不是被推到最右邊 */
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 100%;
   font-size: 20px;
   font-weight: 600;
   overflow: hidden;
