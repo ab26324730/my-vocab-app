@@ -575,15 +575,15 @@ function renderList() {
     const statusLabel = { new: "未複習", known: "已會", unknown: "不會" }[w.status];
     return `
       <div class="word-card" data-id="${w.id}">
+        <button class="delete-btn corner" data-id="${w.id}" title="刪除" aria-label="刪除">×</button>
         <div class="word-card-top">
           <div class="word-text">${escapeHtml(w.word)}</div>
           <span class="status-badge ${w.status}">${statusLabel}</span>
-          <div class="card-actions">
-            <button class="edit-btn" data-id="${w.id}" title="編輯">✏️</button>
-            <button class="delete-btn" data-id="${w.id}" title="刪除">×</button>
-          </div>
         </div>
-        <div class="word-meta">${metaLine}</div>
+        <div class="word-meta-line">
+          <div class="word-meta">${metaLine}</div>
+          <button class="edit-btn" data-id="${w.id}" title="編輯">✏️</button>
+        </div>
         <div class="word-body">
           ${meaningsHtml}
           ${tagsHtml}
@@ -592,10 +592,10 @@ function renderList() {
     `;
   }).join("");
 
-  // 點卡片打開 modal
+  // 點卡片打開 modal(點到任何按鈕不開)
   listEl.querySelectorAll(".word-card").forEach(card => {
     card.addEventListener("click", e => {
-      if (e.target.closest(".card-actions")) return; // 點到操作按鈕不開 modal
+      if (e.target.closest("button")) return;
       openWordDetail(card.dataset.id);
     });
   });

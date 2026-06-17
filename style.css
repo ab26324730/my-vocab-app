@@ -182,12 +182,46 @@ main {
   background: var(--card-bg);
   border-radius: var(--radius);
   padding: 14px 16px;
+  padding-right: 18px;
   box-shadow: var(--shadow);
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
+}
+
+/* 刪除鍵移到卡片右上角(跟編輯鍵拉開距離,避免誤按)*/
+.delete-btn.corner {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  transition: all 0.15s;
+}
+
+.delete-btn.corner:hover {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+/* 留空間給角落的刪除鍵 */
+.word-card .word-card-top {
+  padding-right: 30px;
 }
 
 .word-card:hover {
@@ -211,7 +245,15 @@ main {
   white-space: nowrap;
 }
 
+.word-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .word-card .word-meta {
+  flex: 1;
+  min-width: 0;
   font-size: 12px;
   color: var(--text-light);
   display: flex;
@@ -219,6 +261,25 @@ main {
   align-items: center;
   flex-wrap: wrap;
   line-height: 1.5;
+}
+
+.word-meta-line .edit-btn {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-light);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+
+.word-meta-line .edit-btn:hover {
+  background: #e3f2fd;
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .word-card .word-body {
@@ -249,14 +310,6 @@ main {
 .status-badge.new { background: #e3f2fd; color: #1976d2; }
 .status-badge.known { background: #e8f5e9; color: #388e3c; }
 .status-badge.unknown { background: #fce4ec; color: #c2185b; }
-
-.card-actions {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-  flex-shrink: 0;
-  flex-direction: row;
-}
 
 .status-badge {
   flex-shrink: 0;
