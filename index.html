@@ -16,6 +16,7 @@
       <button class="tab-btn active" data-tab="list">單字本</button>
       <button class="tab-btn" data-tab="add">新增</button>
       <button class="tab-btn" data-tab="review">複習</button>
+      <button class="tab-btn" data-tab="datasets">資料集</button>
       <button class="tab-btn" data-tab="stats">統計</button>
     </nav>
   </header>
@@ -29,6 +30,7 @@
         <button class="filter-btn" data-filter="unknown">不會 <span class="count" id="count-unknown">0</span></button>
         <button class="filter-btn" data-filter="known">已會 <span class="count" id="count-known">0</span></button>
       </div>
+      <div class="tag-filter-bar" id="tag-filter-bar"></div>
       <input type="search" id="search-input" placeholder="🔍 搜尋單字...">
       <div id="word-list"></div>
       <p id="empty-list" class="empty-state" style="display:none;">
@@ -39,7 +41,16 @@
     <!-- 新增單字 tab -->
     <section id="tab-add" class="tab">
       <h2>新增單字</h2>
-      <form id="add-form">
+
+      <!-- 模式切換 -->
+      <div class="add-mode-tabs">
+        <button class="add-mode-btn active" data-mode="claude">🔍 Claude 詳查</button>
+        <button class="add-mode-btn" data-mode="quick">✏️ 快速</button>
+        <button class="add-mode-btn" data-mode="bulk">📋 批次貼上</button>
+      </div>
+
+      <!-- 模式 1:Claude 詳查 -->
+      <form id="add-form" class="add-mode-form" data-mode="claude">
         <div class="form-row">
           <label>單字</label>
           <input type="text" id="new-word" placeholder="例如:serendipity" autocomplete="off" required>
@@ -56,11 +67,89 @@
             <option value="其他">其他</option>
           </select>
         </div>
+        <div class="form-row">
+          <label>資料集 / 分類(選填)</label>
+          <input type="text" id="new-tags" placeholder="例:雜誌、單字書/Ch3" autocomplete="off">
+          <div class="tag-suggestions" id="claude-tag-suggestions"></div>
+        </div>
         <button type="submit" id="add-btn">
           <span class="btn-text">新增並請 Claude 解釋</span>
           <span class="btn-spinner" style="display:none;">Claude 正在分析...</span>
         </button>
-        <p class="hint">💡 提示:Claude 會生成詳細的翻譯、例句、語感說明,並自動儲存在本機</p>
+        <p class="hint">💡 Claude 會生成詳細翻譯、例句、語感說明(約 NT$0.30–0.90)</p>
+      </form>
+
+      <!-- 模式 2:快速新增 -->
+      <form id="add-form-quick" class="add-mode-form" data-mode="quick" style="display:none;">
+        <div class="form-row">
+          <label>單字</label>
+          <input type="text" id="quick-word" placeholder="例如:perspicacious" autocomplete="off" required>
+        </div>
+        <div class="form-row form-row-split">
+          <div>
+            <label>語言</label>
+            <select id="quick-language" required>
+              <option value="英文">英文</option>
+              <option value="日文">日文</option>
+              <option value="韓文">韓文</option>
+              <option value="法文">法文</option>
+              <option value="德文">德文</option>
+              <option value="西班牙文">西班牙文</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+          <div>
+            <label>詞性(選填)</label>
+            <input type="text" id="quick-pos" placeholder="例:n. / v. / adj." autocomplete="off">
+          </div>
+        </div>
+        <div class="form-row">
+          <label>簡短意思(選填)</label>
+          <input type="text" id="quick-note" placeholder="例如:敏銳的" autocomplete="off">
+        </div>
+        <div class="form-row">
+          <label>資料集 / 分類(選填,多個用逗號分隔)</label>
+          <input type="text" id="quick-tags" placeholder="例:雜誌、單字書/Ch3" autocomplete="off">
+          <div class="tag-suggestions" id="quick-tag-suggestions"></div>
+        </div>
+        <button type="submit" class="primary-btn">新增到單字本(不花 token)</button>
+        <p class="hint">💡 適合單字書批次錄入。日後可在卡片裡按「請 Claude 詳細解釋」升級。</p>
+      </form>
+
+      <!-- 模式 3:批次貼上 -->
+      <form id="add-form-bulk" class="add-mode-form" data-mode="bulk" style="display:none;">
+        <div class="form-row">
+          <label>語言(這批單字共用)</label>
+          <select id="bulk-language" required>
+            <option value="英文">英文</option>
+            <option value="日文">日文</option>
+            <option value="韓文">韓文</option>
+            <option value="法文">法文</option>
+            <option value="德文">德文</option>
+            <option value="西班牙文">西班牙文</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>資料集 / 分類(這批共用,選填)</label>
+          <input type="text" id="bulk-tags" placeholder="例:雜誌、單字書/Ch3" autocomplete="off">
+          <div class="tag-suggestions" id="bulk-tag-suggestions"></div>
+          <p class="form-hint">這批新增的單字都會自動標上這些分類。</p>
+        </div>
+        <div class="form-row">
+          <label>單字清單(每行一個)</label>
+          <textarea id="bulk-text" rows="10" placeholder="支援三種格式,可混搭:
+
+serendipity | 意外之喜              (word | meaning)
+perspicacious | adj. | 敏銳的       (word | POS | meaning)
+unwind (v.) 放鬆,紓壓              (word (POS) meaning)
+nostalgia                            (只有單字)
+ephemeral — 短暫的"></textarea>
+          <p class="form-hint">分隔符:<code>|</code>、<code>—</code>、<code>:</code>、<code>=</code>。詞性可以用 <code>(v.)</code> 或 <code>[verb]</code>,或 <code>word | POS | meaning</code> 三段式。</p>
+        </div>
+        <button type="submit" class="primary-btn">全部新增(不花 token)</button>
+        <p class="hint">💡 一次匯入 100+ 個都沒問題。重複的會自動合併標籤,不會重複建立。</p>
+        <div id="bulk-result" style="display:none;"></div>
       </form>
 
       <div id="preview-card" style="display:none;"></div>
@@ -96,6 +185,16 @@
         </div>
         <button id="quit-review" class="quit-btn">結束複習</button>
       </div>
+    </section>
+
+    <!-- 資料集 tab -->
+    <section id="tab-datasets" class="tab">
+      <h2>📁 資料集瀏覽</h2>
+      <p class="dataset-intro form-hint">
+        看每個資料集的學習進度,點「前往」會跳到單字本並自動過濾。<br>
+        💡 想分層的話,新增時把 tag 寫成 <code>單字書/Ch3</code> 或 <code>雜誌/Time/2024-01</code>,系統會自動分組。
+      </p>
+      <div id="dataset-tree"></div>
     </section>
 
     <!-- 統計 tab -->
@@ -209,6 +308,16 @@
               <option value="known">已會</option>
             </select>
           </div>
+          <div class="form-row" id="edit-manual-fields">
+            <label>詞性與意思(快速新增的單字可有多個)</label>
+            <div id="edit-meanings-rows"></div>
+            <button type="button" id="edit-add-meaning" class="ghost-btn-mini">+ 新增詞性</button>
+          </div>
+          <div class="form-row">
+            <label for="edit-tags">資料集 / 分類</label>
+            <input type="text" id="edit-tags" placeholder="例:雜誌、單字書/Ch3">
+            <div class="tag-suggestions" id="edit-tag-suggestions"></div>
+          </div>
           <div class="settings-actions">
             <button type="button" id="edit-cancel" class="ghost-btn">取消</button>
             <button type="submit" class="primary-btn">儲存</button>
@@ -264,6 +373,61 @@
           </div>
         </form>
 
+        <!-- 雲端同步區塊 -->
+        <div class="sync-section">
+          <h3>☁️ 雲端同步(Firebase)</h3>
+          <div id="sync-status-row">
+            <span id="sync-status-dot" class="sync-dot off"></span>
+            <span id="sync-status-text">未設定</span>
+          </div>
+
+          <!-- 階段 1:還沒設定 Firebase config -->
+          <div id="sync-step-config">
+            <p class="form-hint">
+              第一次使用?先看 <strong>README.md</strong> 的「雲端同步設定」一節,跟著建立 Firebase 專案,然後把 firebaseConfig 貼到下面。
+            </p>
+            <textarea id="firebase-config-text"
+              placeholder='貼上 Firebase 主控台的 firebaseConfig 物件,例如:
+{
+  "apiKey": "AIza...",
+  "authDomain": "xxx.firebaseapp.com",
+  "projectId": "xxx",
+  "storageBucket": "xxx.appspot.com",
+  "messagingSenderId": "123",
+  "appId": "1:..."
+}'></textarea>
+            <button type="button" id="firebase-config-save" class="primary-btn">儲存 Firebase 設定</button>
+          </div>
+
+          <!-- 階段 2:已設定但沒登入 -->
+          <div id="sync-step-login" style="display:none;">
+            <div class="form-row">
+              <label>Email</label>
+              <input type="email" id="sync-email" placeholder="your@email.com" autocomplete="username">
+            </div>
+            <div class="form-row">
+              <label>密碼</label>
+              <input type="password" id="sync-password" placeholder="至少 6 個字元" autocomplete="current-password">
+            </div>
+            <div class="settings-actions">
+              <button type="button" id="sync-sign-up" class="ghost-btn">註冊新帳號</button>
+              <button type="button" id="sync-sign-in" class="primary-btn">登入</button>
+            </div>
+            <p class="form-hint" id="sync-login-error" style="color:#d32f2f; display:none;"></p>
+            <button type="button" id="sync-clear-config" class="danger-btn" style="margin-top:12px;">重新設定 Firebase</button>
+          </div>
+
+          <!-- 階段 3:已登入 -->
+          <div id="sync-step-online" style="display:none;">
+            <p class="sync-online-info">
+              已登入:<strong id="sync-user-email"></strong><br>
+              <span class="form-hint">新增/刪除單字會自動同步到雲端,其他裝置即時更新。</span>
+            </p>
+            <button type="button" id="sync-upload-local" class="ghost-btn">把本機所有單字推上雲端(初次使用)</button>
+            <button type="button" id="sync-sign-out" class="danger-btn">登出</button>
+          </div>
+        </div>
+
         <div class="settings-danger">
           <h3>進階</h3>
           <button type="button" id="clear-api-key" class="danger-btn">刪除已儲存的 API key</button>
@@ -278,8 +442,14 @@
   <!-- Toast 提示 -->
   <div id="toast" class="toast"></div>
 
+  <!-- Firebase SDK(用於雲端同步)-->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
   <script src="config.js"></script>
   <script src="claude.js"></script>
+  <script src="firebase-sync.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

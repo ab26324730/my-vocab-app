@@ -54,6 +54,131 @@
 
 ---
 
+## 雲端同步設定(Firebase)
+
+想要電腦/手機/平板**即時同步**單字?跟著以下步驟設定 Firebase(完全免費,個人用量遠在免費額度內)。
+
+### 設定一次,終身受用 — 預計 15-20 分鐘
+
+#### Step 1:建立 Firebase 專案
+
+1. 打開 https://console.firebase.google.com/(用你的 Google 帳號登入)
+2. 點「**新增專案**」(Add project)
+3. 專案名稱輸入 `my-vocab-app`(隨你命名)→ 繼續
+4. **Google Analytics 可以關掉**(這個小專案用不到)→ 建立專案
+5. 等大約 30 秒,專案就建好了
+
+#### Step 2:啟用 Email/Password 登入
+
+1. 左側選單 → **Build → Authentication**
+2. 點「**開始使用**」(Get started)
+3. 選「**Email/Password**」這個方式 → 啟用(第一個切換鈕)→ 儲存
+
+#### Step 3:建立 Firestore 資料庫
+
+1. 左側選單 → **Build → Firestore Database**
+2. 點「**建立資料庫**」(Create database)
+3. 位置選 `asia-east1`(台灣)或 `asia-northeast1`(東京)— 靠近你就好
+4. 起始模式選 **「以正式版模式啟動」**(Start in production mode)→ 建立
+5. 等資料庫建好(約 30 秒)
+
+#### Step 4:設定 Firestore 安全規則(重要!)
+
+1. 進入剛建好的 Firestore → 切到「**規則**」(Rules)分頁
+2. 把預設規則整個刪掉,**貼上這段**:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+3. 按右上「**發佈**」(Publish)
+
+> 這段規則確保:**只有登入的本人能讀寫自己的資料**,別人看不到你的單字。
+
+#### Step 5:取得 Firebase 設定值(firebaseConfig)
+
+1. 左上角專案名稱旁邊的齒輪 ⚙️ → **專案設定**(Project settings)
+2. 拉到下面「**您的應用程式**」區塊
+3. 點 **`</>`**(Web app)圖示
+4. 應用程式暱稱輸入 `my-vocab-app` → **不要**勾選 Firebase Hosting → 註冊應用程式
+5. 看到一段 JavaScript 程式碼,**複製 `const firebaseConfig = { ... }` 那一段**
+
+格式像這樣:
+
+```javascript
+const firebaseConfig = {
+  apiKey: "AIzaSy...........",
+  authDomain: "my-vocab-app.firebaseapp.com",
+  projectId: "my-vocab-app",
+  storageBucket: "my-vocab-app.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abcdef..."
+};
+```
+
+#### Step 6:貼到 APP
+
+1. 打開你的背單字 APP
+2. 點右上 ⚙️ 設定
+3. 滑到下方「☁️ 雲端同步(Firebase)」區塊
+4. **整段 `const firebaseConfig = {...}` 貼到方框裡**(包不包含 `const firebaseConfig =` 都可以)
+5. 按「儲存 Firebase 設定」
+6. 接著會出現登入畫面 → 輸入你想用的 email + 密碼(密碼至少 6 字元)
+7. **第一次按「註冊新帳號」**(之後就改按「登入」)
+8. 註冊成功後,如果你電腦上已經有單字,按「**把本機所有單字推上雲端**」做初次上傳
+
+#### Step 7:其他裝置如法炮製
+
+手機 / 平板 / 其他電腦:
+1. 開 GitHub Pages 網址
+2. ⚙️ 設定 → 同樣輸入 API key 與 Firebase config(**用同一組 email + 密碼登入**)
+3. 自動同步開始,所有單字會從雲端拉下來
+
+> 💡 **同一個 Firebase 專案 + 同一個帳號** = 所有裝置共享資料
+
+### 同步狀態指示燈
+
+設定模態框上方的小圓點顯示同步狀態:
+
+| 顏色 | 意思 |
+|------|------|
+| ⚪ 灰 | 還沒設定 Firebase |
+| 🟠 橘 | 已設定但沒登入 |
+| 🟢 綠(脈動) | 已連線,即時同步中 |
+| 🔴 紅 | 同步發生錯誤,看 console |
+
+### 費用
+
+Firebase 免費額度(個人用量):
+- 每天讀取:**50,000 次**(每打開一次 APP 約 100 次以內)
+- 每天寫入:**20,000 次**(每新增一個單字 1 次)
+- 儲存空間:**1 GB**(可存好幾萬個單字)
+
+你**不可能用得完**。如果真的用爆,Firebase 會直接停服務(不會自動扣費)。
+
+### 設定常見問題
+
+**Q: 設定模態框沒有出現雲端同步區塊?**
+A: 你開的可能是手機緩存的舊版,刷新頁面;或本地沒拉最新程式碼,要 git pull / 重新部署。
+
+**Q: 註冊時跳 `auth/email-already-in-use`?**
+A: 這個 email 你已經註冊過了 → 改用「登入」。
+
+**Q: 怎麼確認資料真的存到雲端?**
+A: 回 Firebase 主控台 → Firestore → 看 `users` 集合下應該有一個你 uid 的文件,裡面有 `words` 子集合。
+
+**Q: 想要砍掉重練?**
+A: 設定 → 點「重新設定 Firebase」會清掉本機設定。**雲端資料不會被刪**(回 Firebase Console → Firestore 手動刪)。
+
+---
+
 ## 部署到 GitHub Pages(讓手機也能用)
 
 只需做一次,之後就有一個網址可以從任何裝置開啟。
