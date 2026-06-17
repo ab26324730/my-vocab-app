@@ -7,7 +7,14 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>我的背單字 APP</title>
-  <link rel="stylesheet" href="style.css?v=20251219h">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // CSS 也用時間戳,避免被快取卡舊版
+    (function () {
+      const link = document.querySelector('link[rel="stylesheet"][href="style.css"]');
+      if (link) link.href = "style.css?v=" + Date.now();
+    })();
+  </script>
 </head>
 <body>
   <header>
@@ -454,10 +461,13 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-  <!-- 改版時把 v=YYYYMMDDx 的字母遞增,強迫手機重新載入(避免快取卡舊版)-->
-  <script src="config.js?v=20251219h"></script>
-  <script src="claude.js?v=20251219h"></script>
-  <script src="firebase-sync.js?v=20251219h"></script>
-  <script src="app.js?v=20251219h"></script>
+  <!-- 用 document.write 配合時間戳,確保每次 HTML 載入時 JS 一定是最新的 -->
+  <script>
+    (function () {
+      const v = Date.now();
+      const scripts = ["config.js", "claude.js", "firebase-sync.js", "app.js"];
+      scripts.forEach(s => document.write(`<script src="${s}?v=${v}"><\/script>`));
+    })();
+  </script>
 </body>
 </html>
