@@ -220,6 +220,30 @@ function senseNumeral(i) {
   return SENSE_NUMERALS[i] || `${i + 1}.`;
 }
 
+// 把 meaning entry 統一轉成 [{chinese, english}] 格式(吃新/舊 schema)
+function getMeaningSenses(meaning) {
+  // 新 schema:meaning.senses 陣列,每筆有 chineseTranslation(字串)+ englishDefinition
+  if (Array.isArray(meaning.senses) && meaning.senses.length > 0) {
+    return meaning.senses.map(s => ({
+      chinese: s.chineseTranslation
+        || (Array.isArray(s.chineseTranslations) ? s.chineseTranslations.join("、") : ""),
+      english: s.englishDefinition || ""
+    })).filter(s => s.chinese || s.english);
+  }
+  // 舊 schema:meaning.chineseTranslations 陣列 + meaning.englishDefinition 字串
+  if (Array.isArray(meaning.chineseTranslations)) {
+    const arr = meaning.chineseTranslations;
+    const englishParts = (meaning.englishDefinition || "").split(/\s*;\s*/).filter(Boolean);
+    // 啟發式:中英 sense 數對齊時 → 1:1 對映
+    if (englishParts.length > 1 && englishParts.length === arr.length) {
+      return arr.map((c, i) => ({ chinese: c, english: englishParts[i] }));
+    }
+    // 否則:全部當同一意思的同義詞,1 sense
+    return [{ chinese: arr.join("、"), english: meaning.englishDefinition || "" }];
+  }
+  return [];
+}
+
 // 把 meanings 陣列依 POS 分組(保留順序)
 // 輸入:[{partOfSpeech, text}]
 // 輸出:[{partOfSpeech, senses: [text, ...]}]
@@ -512,10 +536,13 @@ function renderList() {
 
     if (src === "claude" && w.explanation) {
       metaLine = `<span>${w.language}</span>${w.explanation.pronunciation ? ` · <span>${escapeHtml(w.explanation.pronunciation)}</span>` : ""} · <span class="source-tag claude">✨ Claude</span>`;
-      const raw = (w.explanation.meanings || []).map(m => ({
-        partOfSpeech: m.partOfSpeech,
-        text: (m.chineseTranslations || []).join("、")
-      }));
+      // 用 getMeaningSenses 統一新舊 schema
+      const raw = [];
+      for (const m of (w.explanation.meanings || [])) {
+        for (const sense of getMeaningSenses(m)) {
+          raw.push({ partOfSpeech: m.partOfSpeech, text: sense.chinese });
+        }
+      }
       const groups = groupMeaningsByPOS(raw);
       meaningsHtml = groups.map(renderPOSGroup).join("");
     } else {
@@ -1299,25 +1326,26 @@ function renderWordDetail(record) {
   }
 
   const e = record.explanation;
-  // 把同 POS 的多筆 meaning 編號顯示
+  // 用 getMeaningSenses 統一新舊 schema,再依 POS 合併
   const meaningsByPOS = [];
   for (const m of (e.meanings || [])) {
     const pos = m.partOfSpeech || "";
     let g = meaningsByPOS.find(x => x.partOfSpeech === pos);
     if (!g) {
-      g = { partOfSpeech: pos, items: [] };
+      g = { partOfSpeech: pos, senses: [] };
       meaningsByPOS.push(g);
     }
-    g.items.push(m);
+    g.senses.push(...getMeaningSenses(m));
   }
+
   const meaningsHtml = meaningsByPOS.map(g => {
-    const showNumber = g.items.length > 1;
-    const itemsHtml = g.items.map((m, i) => `
+    const showNumber = g.senses.length > 1;
+    const itemsHtml = g.senses.map((s, i) => `
       <div class="sense-block">
         ${showNumber ? `<span class="sense-num">${senseNumeral(i)}</span>` : ""}
         <div class="sense-content">
-          <div class="chinese-translations">${escapeHtml((m.chineseTranslations || []).join("、"))}</div>
-          <div class="english-def">${escapeHtml(m.englishDefinition || "")}</div>
+          <div class="chinese-translations">${escapeHtml(s.chinese)}</div>
+          ${s.english ? `<div class="english-def">${escapeHtml(s.english)}</div>` : ""}
         </div>
       </div>
     `).join("");

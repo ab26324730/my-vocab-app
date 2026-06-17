@@ -41,22 +41,32 @@ const WORD_EXPLANATION_SCHEMA = {
     },
     meanings: {
       type: "array",
-      description: "依詞性分類的意思",
+      description: "依詞性分類。每個詞性一筆 entry,內含 senses 陣列。",
       items: {
         type: "object",
         properties: {
-          partOfSpeech: { type: "string", description: "詞性(名詞、動詞等)" },
-          chineseTranslations: {
+          partOfSpeech: { type: "string", description: "詞性(動詞、名詞、形容詞等)" },
+          senses: {
             type: "array",
-            description: "該詞性下所有中文意思",
-            items: { type: "string" }
-          },
-          englishDefinition: {
-            type: "string",
-            description: "該詞性的英文簡短解釋"
+            description: "這個詞性的所有獨立意思。**1 個 sense = 1 個元素**。如果單字無歧義只放 1 個元素;有多個截然不同的意思就放多個元素。",
+            items: {
+              type: "object",
+              properties: {
+                chineseTranslation: {
+                  type: "string",
+                  description: "這個 sense 的中文意思。**型別是字串(不是陣列)**。**用「、」頓號連接所有同義詞於一個字串中**。例如 'unwind 放鬆' 這個 sense 寫成 '放鬆、紓壓、休息',「解開」這個 sense 寫成 '解開、卷開、展開'。一個字串內所有詞必須是同義詞或近義字,不可混入其他意思。"
+                },
+                englishDefinition: {
+                  type: "string",
+                  description: "這個 sense 的英文簡短解釋,只解釋這一個 sense"
+                }
+              },
+              required: ["chineseTranslation", "englishDefinition"],
+              additionalProperties: false
+            }
           }
         },
-        required: ["partOfSpeech", "chineseTranslations", "englishDefinition"],
+        required: ["partOfSpeech", "senses"],
         additionalProperties: false
       }
     },
@@ -136,35 +146,65 @@ async function fetchWordExplanation(word, language) {
 
   const userPrompt = `請解釋這個${language}單字:「${word}」
 
-**0. 先判斷是否疑似拼字錯誤(typoCheck)**
+══════════════════════════════════════════
+🚨 meanings 結構說明(嚴格遵守)
+══════════════════════════════════════════
+
+每個詞性一筆 entry,entry 內有 senses 陣列。
+
+**senses 陣列:每個元素代表「一個獨立的意思 (distinct sense)」。**
+- 單字無歧義 → senses 放 1 個元素
+- 單字有 N 個截然不同的意思 → senses 放 N 個元素
+
+**每個 sense 內:**
+- \`chineseTranslation\`:**字串**(不是陣列!)。用頓號「、」連接這個 sense 的所有同義詞。
+- \`englishDefinition\`:這個 sense 的英文解釋。
+
+✅ 正確示範 — unwind 動詞有 3 個獨立意思:
+{
+  partOfSpeech: "動詞",
+  senses: [
+    {
+      chineseTranslation: "放鬆、紓壓、休息",
+      englishDefinition: "to relax and let go of stress"
+    },
+    {
+      chineseTranslation: "解開、卷開、展開",
+      englishDefinition: "to unfold something wound up"
+    },
+    {
+      chineseTranslation: "逐漸揭露、逐步展開",
+      englishDefinition: "to gradually reveal (figurative)"
+    }
+  ]
+}
+
+注意 chineseTranslation 是「字串」(一個字串包多個同義詞),不是「字串陣列」。
+
+❌ 錯誤示範 — 不要這樣寫:
+- chineseTranslation: ["放鬆", "紓壓"]  ← 錯,是字串不是陣列
+- chineseTranslation: "放鬆"  / senses 6 個元素  ← 錯,同義詞應該連在同一字串裡
+- senses 只放 1 個元素 chineseTranslation: "放鬆、解開"  ← 錯,不同意思不能放同字串
+
+══════════════════════════════════════════
+
+**0. typoCheck — 拼字偵測**
 - 仔細看使用者輸入的拼字。若疑似拼錯,設 isLikelyTypo: true,並在 suggestedSpelling 給正確拼法。
-- confidence 分四級:
-  - "high" = 顯然拼錯(如 serindipity → serendipity)
-  - "medium" = 很可能拼錯,但也可能是罕見字
-  - "low" = 微小可能拼錯
-  - "none" = 拼字正確,不是錯字
-- **若懷疑是錯字(high/medium),請以「正確拼法」回答後續所有欄位**(word、meanings、examples 等)
-- reason 簡短說明判斷理由,例如「少一個 e」或「兩字母順序顛倒」
+- confidence:"high" / "medium" / "low" / "none"
+- 若懷疑是錯字(high/medium),請以「正確拼法」回答後續所有欄位
+- reason 簡短說明判斷理由
 
 請以 ${settings.nativeLanguage} 為母語的學習者為對象,提供:
 
-1. **發音**:IPA 音標(日文給羅馬拼音+假名,韓文給羅馬拼音)
-2. **詞性與意思分類(重要!)**:
-   - 若有多個詞性(例如同時是名詞和動詞),分開列出
-   - **同一詞性下若有截然不同的意思(distinct senses),要分成多筆 meaning entry**,各自有自己的中文翻譯與英文解釋
-   - 同一個意思內的同義詞才放在 chineseTranslations 陣列裡(用頓號等級)
-   - 範例:unwind 的動詞有兩個截然不同的意思 → 列為兩筆:
-     • 第 1 筆:partOfSpeech="動詞", chineseTranslations=["放鬆","紓壓"], englishDefinition="to relax and let go of stress"
-     • 第 2 筆:partOfSpeech="動詞", chineseTranslations=["解開","卷開","展開"], englishDefinition="to unfold something that is wound up"
-   - **判斷標準**:如果中文意思需要用「或、另指」連接,或英文解釋需要用 "or" 分開兩個概念 → 就是不同意思,要分成兩筆
-3. **英文解釋**:每筆 meaning 各自有一個簡短英文解釋
-4. **3 個例句**:不同情境(日常 / 正式 / 文學等),附中文翻譯與情境
-5. **語感(分四部分)**
+1. **發音(pronunciation)**:IPA 音標(日文給羅馬拼音+假名,韓文給羅馬拼音)
+2. **meanings**:依上方規則,每個 distinct sense 各一筆 entry
+3. **3 個例句(examples)**:不同情境(日常 / 正式 / 文學等),附中文翻譯與情境
+4. **語感(nuance,分四部分)**
    - **coreFeel**:核心語感、感覺、整體形象(一段話)
    - **synonymDifferences**:列出 2–4 個近義詞,逐一比較
    - **collocations**:列出 3–5 個常見搭配或慣用句型,每個附中文意思
    - **culturalContext**:文化背景、使用場合,沒有就填空字串
-6. **詞形變化**:動詞三態、名詞複數、形容詞比較級等,無變化填「無」
+5. **詞形變化(wordForms)**:動詞三態、名詞複數、形容詞比較級等,無變化填「無」
 
 請完整、實用,專注幫學習者掌握這個字的「感覺」。`;
 
