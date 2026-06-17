@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的背單字 APP</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1>📚 我的單字本</h1>
+      <button id="settings-btn" class="header-icon-btn" title="設定">⚙️</button>
+    </div>
+    <nav>
+      <button class="tab-btn active" data-tab="list">單字本</button>
+      <button class="tab-btn" data-tab="add">新增</button>
+      <button class="tab-btn" data-tab="review">複習</button>
+      <button class="tab-btn" data-tab="stats">統計</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 單字本 tab -->
+    <section id="tab-list" class="tab active">
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">全部 <span class="count" id="count-all">0</span></button>
+        <button class="filter-btn" data-filter="new">未複習 <span class="count" id="count-new">0</span></button>
+        <button class="filter-btn" data-filter="unknown">不會 <span class="count" id="count-unknown">0</span></button>
+        <button class="filter-btn" data-filter="known">已會 <span class="count" id="count-known">0</span></button>
+      </div>
+      <input type="search" id="search-input" placeholder="🔍 搜尋單字...">
+      <div id="word-list"></div>
+      <p id="empty-list" class="empty-state" style="display:none;">
+        還沒有單字哦,點上方「新增」開始記錄!
+      </p>
+    </section>
+
+    <!-- 新增單字 tab -->
+    <section id="tab-add" class="tab">
+      <h2>新增單字</h2>
+      <form id="add-form">
+        <div class="form-row">
+          <label>單字</label>
+          <input type="text" id="new-word" placeholder="例如:serendipity" autocomplete="off" required>
+        </div>
+        <div class="form-row">
+          <label>語言</label>
+          <select id="new-language" required>
+            <option value="英文">英文</option>
+            <option value="日文">日文</option>
+            <option value="韓文">韓文</option>
+            <option value="法文">法文</option>
+            <option value="德文">德文</option>
+            <option value="西班牙文">西班牙文</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <button type="submit" id="add-btn">
+          <span class="btn-text">新增並請 Claude 解釋</span>
+          <span class="btn-spinner" style="display:none;">Claude 正在分析...</span>
+        </button>
+        <p class="hint">💡 提示:Claude 會生成詳細的翻譯、例句、語感說明,並自動儲存在本機</p>
+      </form>
+
+      <div id="preview-card" style="display:none;"></div>
+    </section>
+
+    <!-- 複習 tab -->
+    <section id="tab-review" class="tab">
+      <h2>複習模式</h2>
+      <div id="review-empty" class="empty-state">
+        <p>選擇複習範圍:</p>
+        <div class="review-options">
+          <button class="review-start-btn" data-scope="unknown">只複習「不會」的單字</button>
+          <button class="review-start-btn" data-scope="new">只複習「未複習」的單字</button>
+          <button class="review-start-btn" data-scope="all">全部複習</button>
+        </div>
+      </div>
+
+      <div id="review-area" style="display:none;">
+        <div class="review-progress">
+          <span id="review-current">1</span> / <span id="review-total">1</span>
+        </div>
+        <div id="flashcard" class="flashcard">
+          <div class="card-front">
+            <div class="card-language" id="card-language"></div>
+            <div class="card-word" id="card-word"></div>
+            <button class="flip-btn" id="flip-btn">翻開看解釋</button>
+          </div>
+          <div class="card-back" id="card-back" style="display:none;"></div>
+        </div>
+        <div id="review-actions" style="display:none;" class="review-actions">
+          <button class="review-btn unknown" data-result="unknown">😅 不會</button>
+          <button class="review-btn known" data-result="known">😊 會了</button>
+        </div>
+        <button id="quit-review" class="quit-btn">結束複習</button>
+      </div>
+    </section>
+
+    <!-- 統計 tab -->
+    <section id="tab-stats" class="tab">
+      <h2>使用統計</h2>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">總單字數</div>
+          <div class="stat-value" id="stat-total-words">0</div>
+          <div class="stat-sub" id="stat-words-breakdown">未複習 0 · 不會 0 · 已會 0</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">查詢次數</div>
+          <div class="stat-value" id="stat-total-queries">0</div>
+          <div class="stat-sub" id="stat-first-used">尚未使用</div>
+        </div>
+
+        <div class="stat-card highlight">
+          <div class="stat-label">累計花費(估算)</div>
+          <div class="stat-value" id="stat-total-cost">NT$ 0.00</div>
+          <div class="stat-sub" id="stat-cost-detail">USD $0.0000</div>
+        </div>
+      </div>
+
+      <div class="stats-detail">
+        <h3>Token 用量</h3>
+        <table class="stats-table">
+          <tr>
+            <td>輸入 tokens</td>
+            <td id="stat-input-tokens">0</td>
+          </tr>
+          <tr>
+            <td>輸出 tokens</td>
+            <td id="stat-output-tokens">0</td>
+          </tr>
+          <tr>
+            <td>快取讀取(省到的)</td>
+            <td id="stat-cache-tokens">0</td>
+          </tr>
+          <tr>
+            <td>總計</td>
+            <td id="stat-total-tokens"><strong>0</strong></td>
+          </tr>
+        </table>
+
+        <h3>目前模型</h3>
+        <p class="model-info">
+          <code id="stat-current-model">claude-sonnet-4-6</code>
+          <span id="stat-model-pricing"></span>
+        </p>
+
+        <h3>不同模型的單次查詢估算</h3>
+        <table class="stats-table">
+          <tr><th>模型</th><th>每次約</th></tr>
+          <tr><td>claude-haiku-4-5</td><td>NT$ 0.05</td></tr>
+          <tr><td>claude-sonnet-4-6</td><td>NT$ 0.15</td></tr>
+          <tr><td>claude-opus-4-8</td><td>NT$ 0.25</td></tr>
+        </table>
+
+        <div class="stats-actions">
+          <button id="reset-stats" class="danger-btn">重設統計數字</button>
+        </div>
+        <p class="hint">💡 統計存在瀏覽器本地。重設只歸零數字,不會刪單字。</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- 單字詳細解釋 modal -->
+  <div id="modal" class="modal" style="display:none;">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <button class="modal-close">×</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- 設定 modal -->
+  <div id="settings-modal" class="modal" style="display:none;">
+    <div class="modal-backdrop" id="settings-backdrop"></div>
+    <div class="modal-content settings-content">
+      <button class="modal-close" id="settings-close">×</button>
+      <div class="settings-body">
+        <h2>⚙️ 設定</h2>
+        <p class="settings-intro" id="settings-intro">
+          請輸入你的 Claude API key。設定只存在這個裝置的瀏覽器,不會上傳到任何地方。
+        </p>
+
+        <form id="settings-form">
+          <div class="form-row">
+            <label for="settings-api-key">Claude API Key</label>
+            <input
+              type="password"
+              id="settings-api-key"
+              placeholder="sk-ant-api03-..."
+              autocomplete="off"
+              required>
+            <p class="form-hint">
+              還沒有 key?去 <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a> → Settings → API Keys 申請
+            </p>
+          </div>
+
+          <div class="form-row">
+            <label for="settings-model">使用的模型</label>
+            <select id="settings-model" required>
+              <option value="claude-haiku-4-5">Haiku 4.5 — 最便宜(約 NT$0.05/次)</option>
+              <option value="claude-sonnet-4-6" selected>Sonnet 4.6 — 推薦(約 NT$0.15/次)</option>
+              <option value="claude-opus-4-8">Opus 4.8 — 最強(約 NT$0.25/次)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="settings-native-language">你的母語</label>
+            <input type="text" id="settings-native-language" value="繁體中文" required>
+            <p class="form-hint">Claude 會用這個語言生成翻譯與解釋</p>
+          </div>
+
+          <div class="settings-actions">
+            <button type="button" id="settings-cancel" class="ghost-btn">取消</button>
+            <button type="submit" class="primary-btn">儲存</button>
+          </div>
+        </form>
+
+        <div class="settings-danger">
+          <h3>進階</h3>
+          <button type="button" id="clear-api-key" class="danger-btn">刪除已儲存的 API key</button>
+          <button type="button" id="export-data" class="ghost-btn">匯出所有單字</button>
+          <button type="button" id="import-data" class="ghost-btn">匯入單字</button>
+          <input type="file" id="import-file" accept="application/json" style="display:none;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 提示 -->
+  <div id="toast" class="toast"></div>
+
+  <script src="config.js"></script>
+  <script src="claude.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

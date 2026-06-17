@@ -1,0 +1,24 @@
+# 絕對不能上傳到 GitHub 的檔案
+
+# API key 相關
+API key.txt
+api-key.txt
+*.key
+*.secret
+.env
+.env.local
+
+# 系統檔
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 編輯器
+.vscode/
+.idea/
+*.swp
+*~
+
+# 備份/暫存
+*.bak
+*.tmp
