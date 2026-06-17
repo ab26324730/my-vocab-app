@@ -377,20 +377,95 @@ main {
   color: white;
 }
 
-#bulk-text {
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", sans-serif;
-  resize: vertical;
-  outline: none;
-  line-height: 1.7;
+/* ===== 批次新增模板式 UI ===== */
+.bulk-template {
+  background: var(--card-bg);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: var(--shadow);
 }
 
-#bulk-text:focus {
+.bulk-template-header,
+.bulk-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 150px minmax(180px, 2fr) 32px;
+  gap: 8px;
+  align-items: center;
+}
+
+.bulk-template-header {
+  padding: 4px 4px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+#bulk-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.bulk-row {
+  padding: 0;
+}
+
+.bulk-row input,
+.bulk-row select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  background: white;
+  transition: border 0.15s;
+}
+
+.bulk-row input:focus,
+.bulk-row select:focus {
   border-color: var(--primary);
+}
+
+.bulk-row-remove {
+  background: transparent;
+  border: none;
+  color: var(--text-light);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: all 0.15s;
+}
+
+.bulk-row-remove:hover {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+@media (max-width: 600px) {
+  .bulk-template { padding: 8px; }
+  .bulk-template-header { display: none; }
+  .bulk-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "word remove"
+      "pos pos"
+      "meaning meaning";
+    gap: 6px;
+    padding: 8px;
+    background: var(--bg);
+    border-radius: 8px;
+  }
+  .bulk-row .bulk-word { grid-area: word; }
+  .bulk-row .bulk-pos { grid-area: pos; }
+  .bulk-row .bulk-meaning { grid-area: meaning; }
+  .bulk-row .bulk-row-remove { grid-area: remove; }
+  .bulk-row input,
+  .bulk-row select { font-size: 16px; /* 防 iOS 縮放 */ }
 }
 
 .form-hint code {

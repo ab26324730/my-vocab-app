@@ -914,7 +914,10 @@ document.querySelectorAll(".add-mode-btn").forEach(btn => {
     // 渲染對應模式的 tag 建議
     if (mode === "claude") renderTagSuggestions("claude-tag-suggestions", "new-tags");
     if (mode === "quick") renderTagSuggestions("quick-tag-suggestions", "quick-tags");
-    if (mode === "bulk") renderTagSuggestions("bulk-tag-suggestions", "bulk-tags");
+    if (mode === "bulk") {
+      renderTagSuggestions("bulk-tag-suggestions", "bulk-tags");
+      ensureBulkRowsInit();
+    }
   });
 });
 
@@ -976,56 +979,140 @@ document.getElementById("add-form-quick").addEventListener("submit", e => {
   renderTagSuggestions("quick-tag-suggestions", "quick-tags");
 });
 
-// ----- 批次貼上 -----
+// ----- 批次新增(模板式)-----
+const POS_OPTIONS = [
+  { value: "", label: "— 詞性(選填)—" },
+  { value: "名詞", label: "名詞 n." },
+  { value: "動詞", label: "動詞 v." },
+  { value: "及物動詞", label: "及物動詞 vt." },
+  { value: "不及物動詞", label: "不及物動詞 vi." },
+  { value: "形容詞", label: "形容詞 adj." },
+  { value: "副詞", label: "副詞 adv." },
+  { value: "介系詞", label: "介系詞 prep." },
+  { value: "連接詞", label: "連接詞 conj." },
+  { value: "代名詞", label: "代名詞 pron." },
+  { value: "感嘆詞", label: "感嘆詞 interj." },
+  { value: "助動詞", label: "助動詞 aux." },
+  { value: "冠詞", label: "冠詞 art." },
+  { value: "數詞", label: "數詞 num." },
+];
+
+function buildBulkPOSSelect(selected = "") {
+  return `<select class="bulk-pos">
+    ${POS_OPTIONS.map(o =>
+      `<option value="${escapeAttr(o.value)}"${o.value === selected ? " selected" : ""}>${escapeHtml(o.label)}</option>`
+    ).join("")}
+  </select>`;
+}
+
+function addBulkRow(word = "", pos = "", meaning = "", focus = true) {
+  const container = document.getElementById("bulk-rows");
+  if (!container) return;
+  const row = document.createElement("div");
+  row.className = "bulk-row";
+  row.innerHTML = `
+    <input type="text" class="bulk-word" placeholder="例:unwind" autocomplete="off" value="${escapeAttr(word)}">
+    ${buildBulkPOSSelect(pos)}
+    <input type="text" class="bulk-meaning" placeholder="例:放鬆、紓壓; 解開" autocomplete="off" value="${escapeAttr(meaning)}">
+    <button type="button" class="bulk-row-remove" title="刪除這列" aria-label="刪除這列">×</button>
+  `;
+  row.querySelector(".bulk-row-remove").addEventListener("click", () => {
+    row.remove();
+    // 保證至少有一列
+    if (container.children.length === 0) addBulkRow("", "", "", false);
+  });
+  // Enter 鍵 → 自動新增下一列(在最後一個輸入框按 Enter 時)
+  row.querySelector(".bulk-meaning").addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // 確認目前是最後一列才加新列
+      if (row === container.lastElementChild) addBulkRow();
+      else container.children[Array.from(container.children).indexOf(row) + 1].querySelector(".bulk-word").focus();
+    }
+  });
+  container.appendChild(row);
+  if (focus) row.querySelector(".bulk-word").focus();
+  return row;
+}
+
+function resetBulkRows() {
+  const container = document.getElementById("bulk-rows");
+  if (!container) return;
+  container.innerHTML = "";
+  addBulkRow("", "", "", false);
+}
+
+// + 新增一列
+document.getElementById("bulk-add-row").addEventListener("click", () => addBulkRow());
+
+// 切到 bulk 模式時若無列則初始化一列
+function ensureBulkRowsInit() {
+  const container = document.getElementById("bulk-rows");
+  if (container && container.children.length === 0) {
+    addBulkRow("", "", "", false);
+  }
+}
+
+// ----- 批次新增 submit(模板式)-----
 document.getElementById("add-form-bulk").addEventListener("submit", e => {
   e.preventDefault();
   const language = document.getElementById("bulk-language").value;
-  const text = document.getElementById("bulk-text").value;
   const bulkTags = parseTagsInput(document.getElementById("bulk-tags").value);
-  if (!text.trim()) {
-    toast("請貼上單字清單", "error");
+
+  // 從每一列讀出 {word, pos, meaning}
+  const rawRows = [...document.querySelectorAll("#bulk-rows .bulk-row")].map(row => ({
+    word: row.querySelector(".bulk-word").value.trim(),
+    pos: row.querySelector(".bulk-pos").value.trim(),
+    meaning: row.querySelector(".bulk-meaning").value.trim()
+  })).filter(r => r.word);
+
+  if (rawRows.length === 0) {
+    toast("沒有單字", "error");
     return;
   }
 
-  const lines = text.split("\n");
-  const parsed = [];
-  const mergedExisting = []; // 已存在但加上新標籤或新詞性
-  const seenKeys = new Set(state.words.map(w => `${w.word.toLowerCase()}|${w.language}`));
-
-  for (const line of lines) {
-    const item = parseBulkLine(line);
-    if (!item || !item.word) continue;
-    const key = `${item.word.toLowerCase()}|${language}`;
-    if (seenKeys.has(key)) {
-      // 已存在 → 合併標籤 + 合併新意思
-      const existing = state.words.find(w =>
-        w.word.toLowerCase() === item.word.toLowerCase() && w.language === language
-      );
-      if (existing) {
-        let changes = [];
-        // 合併標籤
-        const newTags = bulkTags.filter(t => !getTags(existing).includes(t));
-        if (newTags.length > 0) {
-          existing.tags = dedupeTags([...getTags(existing), ...bulkTags]);
-          changes.push(`+標籤 ${newTags.join("、")}`);
-        }
-        // 合併意思(只對 manual 單字)
-        if (wordSource(existing) === "manual" && item.meanings.length > 0) {
-          const addedCount = mergeMeaningsInto(existing, item.meanings);
-          if (addedCount > 0) changes.push(`+${addedCount} 個意思`);
-        }
-        if (changes.length > 0) {
-          mergedExisting.push({ word: existing.word, changes });
-        }
-      }
-      continue;
+  // 同單字合併:同單字寫多列 = 多個意思
+  // 用 lowercased word 當 key 合併
+  const wordMap = new Map();
+  for (const r of rawRows) {
+    const key = r.word.toLowerCase();
+    if (!wordMap.has(key)) {
+      wordMap.set(key, { word: r.word, meanings: [] });
     }
-    parsed.push(item);
-    seenKeys.add(key);
+    if (r.pos || r.meaning) {
+      wordMap.get(key).meanings.push({ partOfSpeech: r.pos, note: r.meaning });
+    }
+  }
+
+  // 區分「新增」與「合併到既有」
+  const parsed = [];
+  const mergedExisting = [];
+  for (const { word, meanings } of wordMap.values()) {
+    const expanded = expandSensesInMeanings(meanings); // ; 拆同詞性多意思
+    const existing = state.words.find(w =>
+      w.word.toLowerCase() === word.toLowerCase() && w.language === language
+    );
+    if (existing) {
+      let changes = [];
+      const newTags = bulkTags.filter(t => !getTags(existing).includes(t));
+      if (newTags.length > 0) {
+        existing.tags = dedupeTags([...getTags(existing), ...bulkTags]);
+        changes.push(`+標籤 ${newTags.join("、")}`);
+      }
+      if (wordSource(existing) === "manual" && expanded.length > 0) {
+        const addedCount = mergeMeaningsInto(existing, expanded);
+        if (addedCount > 0) changes.push(`+${addedCount} 個意思`);
+      }
+      if (changes.length > 0) {
+        mergedExisting.push({ word: existing.word, changes });
+      }
+    } else {
+      parsed.push({ word, meanings: expanded });
+    }
   }
 
   if (parsed.length === 0 && mergedExisting.length === 0) {
-    toast("沒有有效的單字", "error");
+    toast("沒有有效的新單字(可能都已存在或沒有變化)", "error");
     return;
   }
 
@@ -1034,7 +1121,7 @@ document.getElementById("add-form-bulk").addEventListener("submit", e => {
   if (mergedExisting.length > 0) confirmMsg.push(`合併到 ${mergedExisting.length} 個既有單字`);
   if (!confirm(`要${confirmMsg.join("、")}嗎?`)) return;
 
-  // 加入新單字
+  // 建立新單字 record
   const newRecords = parsed.map(p =>
     newQuickWordRecord(p.word, language, p.meanings, null, bulkTags)
   );
@@ -1043,10 +1130,7 @@ document.getElementById("add-form-bulk").addEventListener("submit", e => {
 
   // 推到雲端
   if (typeof fbIsSignedIn === "function" && fbIsSignedIn()) {
-    if (newRecords.length > 0) {
-      fbBulkPushWords(newRecords).catch(e => console.warn("批次推送失敗:", e));
-    }
-    // 合併標籤的也要推
+    if (newRecords.length > 0) fbBulkPushWords(newRecords).catch(e => console.warn(e));
     for (const m of mergedExisting) {
       const w = state.words.find(x => x.word === m.word && x.language === language);
       if (w) fbPushWord(w).catch(e => console.warn(e));
@@ -1066,7 +1150,7 @@ document.getElementById("add-form-bulk").addEventListener("submit", e => {
   resultEl.innerHTML = resultHtml;
   resultEl.style.display = "block";
 
-  document.getElementById("bulk-text").value = "";
+  resetBulkRows();
   if (state.currentTab === "list") renderList();
   toast(`完成:新增 ${newRecords.length}、合併 ${mergedExisting.length}`, "success");
   renderTagSuggestions("bulk-tag-suggestions", "bulk-tags");

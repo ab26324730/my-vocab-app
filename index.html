@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>我的背單字 APP</title>
-  <link rel="stylesheet" href="style.css?v=20251219e">
+  <link rel="stylesheet" href="style.css?v=20251219f">
 </head>
 <body>
   <header>
@@ -49,7 +49,7 @@
       <div class="add-mode-tabs">
         <button class="add-mode-btn active" data-mode="claude">🔍 Claude 詳查</button>
         <button class="add-mode-btn" data-mode="quick">✏️ 快速</button>
-        <button class="add-mode-btn" data-mode="bulk">📋 批次貼上</button>
+        <button class="add-mode-btn" data-mode="bulk">📋 批次新增</button>
       </div>
 
       <!-- 模式 1:Claude 詳查 -->
@@ -139,23 +139,22 @@
           <div class="tag-suggestions" id="bulk-tag-suggestions"></div>
           <p class="form-hint">這批新增的單字都會自動標上這些分類。</p>
         </div>
-        <div class="form-row">
-          <label>單字清單(每行一個)</label>
-          <textarea id="bulk-text" rows="11" placeholder="可混搭多種格式:
-
-unwind,(v.),放鬆、紓壓; 解開、卷開         ← 分號 ; 分不同意思,頓號、分同義詞
-present (adj.) 出席的 (n.) 禮物            ← 多詞性
-serendipity | n. | 意外之喜                ← 三段式
-perspicacious | 敏銳的                     ← 只有意思
-nostalgia                                   ← 只有單字"></textarea>
-          <p class="form-hint">
-            <strong>分號 <code>;</code></strong> = 不同意思(會自動編號 ①②)<br>
-            <strong>頓號 <code>、</code></strong> = 同義詞、近義字(保留在同一個意思裡)<br>
-            分隔符:<code>,</code> <code>|</code> <code>—</code> <code>:</code> <code>=</code> · 詞性用 <code>(v.)</code> 或 <code>[verb]</code>
-          </p>
+        <div class="bulk-template">
+          <div class="bulk-template-header">
+            <span class="bulk-col-word">單字</span>
+            <span class="bulk-col-pos">詞性</span>
+            <span class="bulk-col-meaning">意思</span>
+            <span class="bulk-col-remove"></span>
+          </div>
+          <div id="bulk-rows"></div>
+          <button type="button" id="bulk-add-row" class="ghost-btn-mini">+ 新增一列</button>
         </div>
+
+        <p class="form-hint" style="margin-top:10px;">
+          💡 同單字寫多列 = 多個詞性/意思,送出時會合併成一筆。<br>
+          💡 意思欄用「<code>;</code>」分不同意思(會自動編號 ①②),「<code>、</code>」分同義詞。
+        </p>
         <button type="submit" class="primary-btn">全部新增(不花 token)</button>
-        <p class="hint">💡 一次匯入 100+ 個都沒問題。重複的會自動合併標籤,不會重複建立。</p>
         <div id="bulk-result" style="display:none;"></div>
       </form>
 
@@ -455,9 +454,9 @@ nostalgia                                   ← 只有單字"></textarea>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
   <!-- 改版時把 v=YYYYMMDDx 的字母遞增,強迫手機重新載入(避免快取卡舊版)-->
-  <script src="config.js?v=20251219e"></script>
-  <script src="claude.js?v=20251219e"></script>
-  <script src="firebase-sync.js?v=20251219e"></script>
-  <script src="app.js?v=20251219e"></script>
+  <script src="config.js?v=20251219f"></script>
+  <script src="claude.js?v=20251219f"></script>
+  <script src="firebase-sync.js?v=20251219f"></script>
+  <script src="app.js?v=20251219f"></script>
 </body>
 </html>
