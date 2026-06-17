@@ -1187,9 +1187,9 @@ main {
 .flashcard {
   background: var(--card-bg);
   border-radius: 16px;
-  padding: 40px 24px;
+  padding: 32px 24px 24px;
   box-shadow: var(--shadow-lg);
-  min-height: 300px;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1198,35 +1198,53 @@ main {
   margin-bottom: 20px;
 }
 
+.card-front {
+  cursor: pointer; /* 整張卡片可點翻面 */
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .card-language {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-light);
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .card-word {
-  font-size: 42px;
+  font-size: 40px;
   font-weight: 700;
   color: var(--primary-dark);
-  margin-bottom: 32px;
+  margin-bottom: 20px;
   word-break: break-word;
+  line-height: 1.2;
 }
 
 .flip-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 12px 28px;
+  background: transparent;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+  padding: 6px 16px;
   border-radius: 999px;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.15s;
 }
 
 .flip-btn:hover {
-  background: var(--primary-dark);
+  background: var(--primary);
+  color: white;
+}
+
+.flip-hint {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 8px;
+  font-style: italic;
 }
 
 .card-back {

@@ -1577,14 +1577,24 @@ function showCurrentCard() {
   state.review.flipped = false;
 }
 
-document.getElementById("flip-btn").addEventListener("click", () => {
+function flipCurrentCard() {
+  if (state.review.flipped) return;
   const w = state.review.queue[state.review.index];
+  if (!w) return;
   document.getElementById("card-back").innerHTML = renderWordDetail(w);
   document.querySelector(".card-front").style.display = "none";
   document.getElementById("card-back").style.display = "block";
   document.getElementById("review-actions").style.display = "flex";
   state.review.flipped = true;
+}
+
+document.getElementById("flip-btn").addEventListener("click", e => {
+  e.stopPropagation(); // 避免向上 bubble 再觸發一次
+  flipCurrentCard();
 });
+
+// 點卡片正面任意位置也能翻面
+document.getElementById("card-front").addEventListener("click", flipCurrentCard);
 
 document.querySelectorAll(".review-btn").forEach(btn => {
   btn.addEventListener("click", () => {

@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>我的背單字 APP</title>
-  <link rel="stylesheet" href="style.css?v=20251219g">
+  <link rel="stylesheet" href="style.css?v=20251219h">
 </head>
 <body>
   <header>
@@ -178,10 +178,11 @@
           <span id="review-current">1</span> / <span id="review-total">1</span>
         </div>
         <div id="flashcard" class="flashcard">
-          <div class="card-front">
+          <div class="card-front" id="card-front">
             <div class="card-language" id="card-language"></div>
             <div class="card-word" id="card-word"></div>
-            <button class="flip-btn" id="flip-btn">翻開看解釋</button>
+            <button class="flip-btn" id="flip-btn" type="button">看解釋</button>
+            <p class="flip-hint">(點卡片任意位置也行)</p>
           </div>
           <div class="card-back" id="card-back" style="display:none;"></div>
         </div>
@@ -454,9 +455,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
   <!-- 改版時把 v=YYYYMMDDx 的字母遞增,強迫手機重新載入(避免快取卡舊版)-->
-  <script src="config.js?v=20251219g"></script>
-  <script src="claude.js?v=20251219g"></script>
-  <script src="firebase-sync.js?v=20251219g"></script>
-  <script src="app.js?v=20251219g"></script>
+  <script src="config.js?v=20251219h"></script>
+  <script src="claude.js?v=20251219h"></script>
+  <script src="firebase-sync.js?v=20251219h"></script>
+  <script src="app.js?v=20251219h"></script>
 </body>
 </html>
