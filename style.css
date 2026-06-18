@@ -377,6 +377,55 @@ main {
   color: white;
 }
 
+/* ===== 手動 Claude 模式 ===== */
+.manual-claude-intro {
+  background: linear-gradient(135deg, #f3f9f3 0%, #e6f4e6 100%);
+  border-left: 3px solid var(--success);
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+
+.prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.prompt-header label {
+  margin: 0;
+}
+
+#cm-generated-prompt,
+#cm-response {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: "SF Mono", Monaco, Consolas, "PingFang TC", "Microsoft JhengHei", monospace;
+  font-size: 12px;
+  resize: vertical;
+  outline: none;
+  line-height: 1.6;
+  background: var(--bg);
+}
+
+#cm-generated-prompt:focus,
+#cm-response:focus {
+  border-color: var(--primary);
+}
+
+#cm-generated-prompt {
+  background: #f8faff;
+  color: var(--text);
+}
+
+#cm-prompt-area .form-row {
+  margin-bottom: 14px;
+}
+
 /* ===== 批次新增模板式 UI ===== */
 .bulk-template {
   background: var(--card-bg);

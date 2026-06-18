@@ -54,9 +54,10 @@
 
       <!-- 模式切換 -->
       <div class="add-mode-tabs">
-        <button class="add-mode-btn active" data-mode="claude">🔍 Claude 詳查</button>
+        <button class="add-mode-btn active" data-mode="claude">🔍 Claude API</button>
+        <button class="add-mode-btn" data-mode="claude-manual">🆓 手動 Claude</button>
         <button class="add-mode-btn" data-mode="quick">✏️ 快速</button>
-        <button class="add-mode-btn" data-mode="bulk">📋 批次新增</button>
+        <button class="add-mode-btn" data-mode="bulk">📋 批次</button>
       </div>
 
       <!-- 模式 1:Claude 詳查 -->
@@ -87,6 +88,57 @@
           <span class="btn-spinner" style="display:none;">Claude 正在分析...</span>
         </button>
         <p class="hint">💡 Claude 會生成詳細翻譯、例句、語感說明(約 NT$0.30–0.90)</p>
+      </form>
+
+      <!-- 模式 1b:手動 Claude(產生 prompt,自己貼到 Claude.ai)-->
+      <form id="add-form-claude-manual" class="add-mode-form" data-mode="claude-manual" style="display:none;">
+        <p class="form-hint manual-claude-intro">
+          💡 用你自己的 Claude(網頁/桌面/手機 APP)查單字,把回應 JSON 貼回來。<br>
+          <strong>完全不消耗 API 費用</strong>,適合 Claude Max 訂閱者。
+        </p>
+
+        <div class="form-row form-row-split">
+          <div>
+            <label>單字</label>
+            <input type="text" id="cm-word" placeholder="例:serendipity" autocomplete="off" required>
+          </div>
+          <div>
+            <label>語言</label>
+            <select id="cm-language" required>
+              <option value="英文">英文</option>
+              <option value="日文">日文</option>
+              <option value="韓文">韓文</option>
+              <option value="法文">法文</option>
+              <option value="德文">德文</option>
+              <option value="西班牙文">西班牙文</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>資料集 / 分類(選填)</label>
+          <input type="text" id="cm-tags" placeholder="例:單字書/Day1、雜誌/Time" autocomplete="off">
+          <div class="tag-suggestions" id="cm-tag-suggestions"></div>
+        </div>
+
+        <button type="button" id="cm-generate-prompt" class="primary-btn">產生 Prompt</button>
+
+        <div id="cm-prompt-area" style="display:none; margin-top: 16px;">
+          <div class="form-row">
+            <div class="prompt-header">
+              <label>Step 1:把這段貼到 Claude</label>
+              <button type="button" id="cm-copy-prompt" class="ghost-btn-mini">📋 一鍵複製</button>
+            </div>
+            <textarea id="cm-generated-prompt" rows="8" readonly></textarea>
+          </div>
+
+          <div class="form-row">
+            <label>Step 2:把 Claude 的 JSON 回應貼這裡</label>
+            <textarea id="cm-response" rows="10" placeholder='Claude 回的 JSON,直接貼這裡。可以含 ```json``` 包覆,系統會自動處理。'></textarea>
+          </div>
+
+          <button type="submit" class="primary-btn">解析並新增到單字本</button>
+        </div>
       </form>
 
       <!-- 模式 2:快速新增 -->

@@ -916,12 +916,234 @@ document.querySelectorAll(".add-mode-btn").forEach(btn => {
     document.getElementById("preview-card").style.display = "none";
     // 渲染對應模式的 tag 建議
     if (mode === "claude") renderTagSuggestions("claude-tag-suggestions", "new-tags");
+    if (mode === "claude-manual") renderTagSuggestions("cm-tag-suggestions", "cm-tags");
     if (mode === "quick") renderTagSuggestions("quick-tag-suggestions", "quick-tags");
     if (mode === "bulk") {
       renderTagSuggestions("bulk-tag-suggestions", "bulk-tags");
       ensureBulkRowsInit();
     }
   });
+});
+
+// ----- 手動 Claude 模式(不花 API 費,自己貼) -----
+
+function generateManualClaudePrompt(word, language, nativeLanguage = "繁體中文") {
+  return `請以 ${nativeLanguage} 為母語的學習者為對象,解釋這個${language}單字:「${word}」
+
+══════════════════════════════════════════
+🚨 meanings 結構說明(嚴格遵守)
+══════════════════════════════════════════
+
+每個詞性一筆 meaning entry,entry 內有 senses 陣列。
+
+senses 陣列:每個元素代表「一個獨立的意思 (distinct sense)」。
+- 單字無歧義 → senses 放 1 個元素
+- 單字有 N 個截然不同的意思 → senses 放 N 個元素
+
+每個 sense 內:
+- chineseTranslation:字串(不是陣列!)。用頓號「、」連接這個 sense 的所有同義詞。
+- englishDefinition:這個 sense 的英文簡短解釋。
+
+✅ 正確示範 — unwind 動詞有 3 個獨立意思,寫成 senses 陣列 3 個元素:
+{
+  "partOfSpeech": "動詞",
+  "senses": [
+    { "chineseTranslation": "放鬆、紓壓、休息", "englishDefinition": "to relax and let go of stress" },
+    { "chineseTranslation": "解開、卷開、展開", "englishDefinition": "to unfold something wound up" },
+    { "chineseTranslation": "逐漸揭露、逐步展開", "englishDefinition": "to gradually reveal (figurative)" }
+  ]
+}
+
+❌ 錯誤示範:不要把同義詞拆成 senses 多個元素;不要把不同意思塞同一字串
+
+══════════════════════════════════════════
+
+0. typoCheck — 拼字偵測
+   - 若疑似拼錯,設 isLikelyTypo: true,並在 suggestedSpelling 給正確拼法
+   - confidence:"high" / "medium" / "low" / "none"
+   - 若懷疑是錯字(high/medium),請以「正確拼法」回答後續所有欄位
+   - reason 簡短說明判斷理由
+
+1. 發音(pronunciation):IPA 音標(日文給羅馬拼音+假名,韓文給羅馬拼音)
+2. meanings:依上方規則,每個詞性一筆 entry,senses 陣列含所有獨立意思
+3. 3 個例句(examples):不同情境(日常 / 正式 / 文學等),附中文翻譯與情境
+4. 語感(nuance,分四部分)
+   - coreFeel:核心語感、整體形象(一段話)
+   - synonymDifferences:2–4 個近義詞,每筆 { word, difference }
+   - collocations:3–5 個常見搭配,每筆 { pattern, meaning }
+   - culturalContext:文化背景、使用場合,沒有就填空字串
+5. 詞形變化(wordForms):動詞三態、名詞複數、形容詞比較級等,無變化填「無」
+
+══════════════════════════════════════════
+請以下面這個 JSON 結構回答,**只回 JSON,不要任何說明文字、不要包 markdown code block**:
+══════════════════════════════════════════
+
+{
+  "typoCheck": {
+    "isLikelyTypo": false,
+    "suggestedSpelling": "${word}",
+    "confidence": "none",
+    "reason": ""
+  },
+  "word": "${word}",
+  "language": "${language}",
+  "pronunciation": "",
+  "meanings": [
+    {
+      "partOfSpeech": "",
+      "senses": [
+        { "chineseTranslation": "", "englishDefinition": "" }
+      ]
+    }
+  ],
+  "examples": [
+    { "sentence": "", "translation": "", "context": "" },
+    { "sentence": "", "translation": "", "context": "" },
+    { "sentence": "", "translation": "", "context": "" }
+  ],
+  "nuance": {
+    "coreFeel": "",
+    "synonymDifferences": [
+      { "word": "", "difference": "" }
+    ],
+    "collocations": [
+      { "pattern": "", "meaning": "" }
+    ],
+    "culturalContext": ""
+  },
+  "wordForms": ""
+}`;
+}
+
+function parseManualClaudeResponse(text) {
+  let s = (text || "").trim();
+  if (!s) throw new Error("沒有貼入內容");
+
+  // 剝除 markdown code fence(```json ... ``` 或 ``` ... ```)
+  const fence = s.match(/```(?:json|JSON)?\s*([\s\S]*?)\s*```/);
+  if (fence) s = fence[1].trim();
+
+  // 找第一個 { 與最後一個 }(去掉前後可能的閒言碎語)
+  const firstBrace = s.indexOf("{");
+  const lastBrace = s.lastIndexOf("}");
+  if (firstBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error("找不到 JSON 物件");
+  }
+  s = s.substring(firstBrace, lastBrace + 1);
+
+  let parsed;
+  try {
+    parsed = JSON.parse(s);
+  } catch (e) {
+    throw new Error("JSON 格式錯誤:" + e.message);
+  }
+
+  // 基本欄位檢查
+  if (!parsed.meanings || !Array.isArray(parsed.meanings)) {
+    throw new Error("JSON 缺少 meanings 欄位");
+  }
+  return parsed;
+}
+
+// 「產生 Prompt」按鈕
+document.getElementById("cm-generate-prompt").addEventListener("click", () => {
+  const word = document.getElementById("cm-word").value.trim();
+  const language = document.getElementById("cm-language").value;
+  if (!word) {
+    toast("請先輸入單字", "error");
+    document.getElementById("cm-word").focus();
+    return;
+  }
+  const settings = loadSettings();
+  const prompt = generateManualClaudePrompt(word, language, settings.nativeLanguage || "繁體中文");
+  document.getElementById("cm-generated-prompt").value = prompt;
+  document.getElementById("cm-prompt-area").style.display = "block";
+  // 自動 focus 到 prompt textarea 方便手動複製
+  const ta = document.getElementById("cm-generated-prompt");
+  ta.focus();
+  ta.setSelectionRange(0, 0);
+});
+
+// 「一鍵複製」按鈕
+document.getElementById("cm-copy-prompt").addEventListener("click", async () => {
+  const text = document.getElementById("cm-generated-prompt").value;
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("已複製到剪貼簿", "success");
+  } catch {
+    document.getElementById("cm-generated-prompt").select();
+    toast("自動複製失敗,請按 Ctrl/⌘+C", "error");
+  }
+});
+
+// 「解析並新增」按鈕(form submit)
+document.getElementById("add-form-claude-manual").addEventListener("submit", e => {
+  e.preventDefault();
+  const word = document.getElementById("cm-word").value.trim();
+  const language = document.getElementById("cm-language").value;
+  const tags = parseTagsInput(document.getElementById("cm-tags").value);
+  const responseText = document.getElementById("cm-response").value;
+
+  if (!word) { toast("請輸入單字", "error"); return; }
+  if (!responseText.trim()) {
+    toast("請貼入 Claude 的 JSON 回應", "error");
+    return;
+  }
+
+  let explanation;
+  try {
+    explanation = parseManualClaudeResponse(responseText);
+  } catch (err) {
+    toast("解析失敗:" + err.message, "error");
+    return;
+  }
+
+  // 拼字偵測(同 API 流程)
+  const tc = explanation.typoCheck;
+  let finalWord = word;
+  if (tc && tc.isLikelyTypo && (tc.confidence === "high" || tc.confidence === "medium")
+      && tc.suggestedSpelling && tc.suggestedSpelling !== word) {
+    const useCorrected = confirm(
+      `⚠️ 拼字偵測\n\n你輸入:${word}\nClaude 建議:${tc.suggestedSpelling}(${tc.confidence})\n理由:${tc.reason || "(無)"}\n\n按「確定」採用建議拼字,「取消」保留原拼字`
+    );
+    if (useCorrected) finalWord = tc.suggestedSpelling;
+  }
+
+  // 檢查重複
+  const existing = state.words.find(w =>
+    w.word.toLowerCase() === finalWord.toLowerCase() && w.language === language
+  );
+  if (existing) {
+    if (!confirm(`「${finalWord}」已在單字本裡,要覆蓋嗎?`)) return;
+    state.words = state.words.filter(w => w.id !== existing.id);
+    if (typeof fbIsSignedIn === "function" && fbIsSignedIn()) {
+      fbDeleteWord(existing.id).catch(e => console.warn(e));
+    }
+  }
+
+  const record = newWordRecord(finalWord, language, explanation);
+  record.tags = dedupeTags(tags);
+  state.words.unshift(record);
+  saveWords(state.words);
+  if (typeof fbIsSignedIn === "function" && fbIsSignedIn()) {
+    fbPushWord(record).catch(e => console.warn(e));
+  }
+
+  // 預覽
+  const preview = document.getElementById("preview-card");
+  preview.innerHTML = renderWordDetail(record);
+  preview.style.display = "block";
+
+  // 清空表單,準備下一個
+  document.getElementById("cm-word").value = "";
+  document.getElementById("cm-response").value = "";
+  document.getElementById("cm-prompt-area").style.display = "none";
+  document.getElementById("cm-tags").value = "";
+  document.getElementById("cm-word").focus();
+  renderTagSuggestions("cm-tag-suggestions", "cm-tags");
+
+  toast(`「${finalWord}」已加入(手動 Claude,免費!)`, "success");
 });
 
 // ----- 快速新增(不呼叫 Claude)-----
