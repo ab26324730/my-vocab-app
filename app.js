@@ -187,6 +187,10 @@ const POS_LABELS = {
   "art.": "冠詞 art.", "art": "冠詞 art.",
   "num.": "數詞 num.", "num": "數詞 num.",
   "phr.": "片語 phr.", "phr": "片語 phr.",
+  "phr.v.": "片語動詞 phr.v.", "phrv": "片語動詞 phr.v.", "phrv.": "片語動詞 phr.v.",
+  "ger.": "動名詞 ger.", "ger": "動名詞 ger.",
+  "pres.p.": "現在分詞 pres.p.", "presp": "現在分詞 pres.p.",
+  "pp.": "過去分詞 pp.", "pp": "過去分詞 pp.",
   // 英文全寫
   "noun": "名詞 n.",
   "verb": "動詞 v.",
@@ -197,6 +201,11 @@ const POS_LABELS = {
   "pronoun": "代名詞 pron.",
   "interjection": "感嘆詞 interj.",
   "phrase": "片語 phr.",
+  "phrasal verb": "片語動詞 phr.v.",
+  "phrasal-verb": "片語動詞 phr.v.",
+  "gerund": "動名詞 ger.",
+  "present participle": "現在分詞 pres.p.",
+  "past participle": "過去分詞 pp.",
   // 中文 → 加縮寫
   "名詞": "名詞 n.",
   "動詞": "動詞 v.",
@@ -215,6 +224,11 @@ const POS_LABELS = {
   "冠詞": "冠詞 art.",
   "數詞": "數詞 num.",
   "片語": "片語 phr.",
+  "片語動詞": "片語動詞 phr.v.",
+  "動詞片語": "片語動詞 phr.v.",
+  "動名詞": "動名詞 ger.",
+  "現在分詞": "現在分詞 pres.p.",
+  "過去分詞": "過去分詞 pp.",
 };
 
 // 同 POS 多筆 meaning 時用 ①②③ 編號
@@ -279,13 +293,13 @@ function renderPOSGroup(group) {
 }
 
 // 渲染整張卡片的所有 POS groups
-// 統一使用結構化排版,確保「跨卡片」視覺對齊
-// 單意思也保留透明 ① 占位,讓 résumé 之類的卡片跟 unwind 之類的卡片中文起點一致
+// 詞性獨立一行(字典標準排版),意思在下方且固定縮排對齊
+// 單意思也保留透明 ① 占位,跨卡片中文起點一致
 function renderCardMeanings(groups) {
   if (!groups || groups.length === 0) return "";
   return groups.map(g => {
     const pos = g.partOfSpeech
-      ? `<span class="pos-inline">${escapeHtml(formatPOS(g.partOfSpeech))}</span>`
+      ? `<div class="pos-line"><span class="pos-inline">${escapeHtml(formatPOS(g.partOfSpeech))}</span></div>`
       : "";
     const showNums = g.senses.length > 1;
     const sensesHtml = g.senses.map((s, i) => {
@@ -957,6 +971,20 @@ senses 陣列:每個元素代表「一個獨立的意思 (distinct sense)」。
 ❌ 錯誤示範:不要把同義詞拆成 senses 多個元素;不要把不同意思塞同一字串
 
 ══════════════════════════════════════════
+🚨 partOfSpeech 必須是「單一短詞」
+══════════════════════════════════════════
+
+✅ 正確:"動詞" / "名詞" / "形容詞" / "副詞" / "介系詞" / "連接詞" / "代名詞"
+       / "片語動詞" / "動名詞" / "現在分詞" / "過去分詞" / "片語"
+
+❌ 錯誤:不要加括號或附加說明
+  - "名詞(動名詞)"     → 應該寫 "動名詞"
+  - "動詞(現在分詞)"   → 應該寫 "現在分詞"
+  - "片語動詞 (phrasal verb)" → 應該寫 "片語動詞"
+
+如果一個字同時對應多種詞性,分成多筆 meaning entry,每筆的 partOfSpeech 各自獨立一個短詞。
+
+══════════════════════════════════════════
 
 0. typoCheck — 拼字偵測
    - 若疑似拼錯,設 isLikelyTypo: true,並在 suggestedSpelling 給正確拼法
@@ -1242,6 +1270,10 @@ const POS_OPTIONS = [
   { value: "冠詞", label: "冠詞 art." },
   { value: "數詞", label: "數詞 num." },
   { value: "片語", label: "片語 phr." },
+  { value: "片語動詞", label: "片語動詞 phr.v." },
+  { value: "動名詞", label: "動名詞 ger." },
+  { value: "現在分詞", label: "現在分詞 pres.p." },
+  { value: "過去分詞", label: "過去分詞 pp." },
 ];
 
 function posSelectOptionsHTML(selected = "") {
@@ -1655,10 +1687,10 @@ function renderWordDetail(record) {
       const groups = groupMeaningsByPOS(raw);
       const blocksHtml = groups.map(g => {
         const pos = g.partOfSpeech
-          ? `<span class="pos-inline">${escapeHtml(formatPOS(g.partOfSpeech))}</span>`
+          ? `<div class="pos-line"><span class="pos-inline">${escapeHtml(formatPOS(g.partOfSpeech))}</span></div>`
           : "";
         if (g.senses.length <= 1) {
-          return `<div class="quick-note">${pos}${escapeHtml(g.senses[0] || "(無筆記)")}</div>`;
+          return `<div class="quick-note">${pos}<div class="senses-list"><div class="sense-item"><span class="sense-num placeholder">①</span>${escapeHtml(g.senses[0] || "(無筆記)")}</div></div></div>`;
         }
         const sensesHtml = g.senses.map((s, i) =>
           `<div class="sense-item"><span class="sense-num">${senseNumeral(i)}</span>${escapeHtml(s)}</div>`

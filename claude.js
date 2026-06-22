@@ -45,7 +45,10 @@ const WORD_EXPLANATION_SCHEMA = {
       items: {
         type: "object",
         properties: {
-          partOfSpeech: { type: "string", description: "詞性(動詞、名詞、形容詞等)" },
+          partOfSpeech: {
+            type: "string",
+            description: "詞性的**單一短詞**,例如 '動詞' '名詞' '形容詞' '副詞' '片語動詞' '動名詞' '片語' '現在分詞' '過去分詞' 等。**禁止加括號或附加說明**:不要寫 '名詞(動名詞)' 或 '片語動詞 (phrasal verb)' 之類,如果有次分類意義不同,請另外建立一筆 meaning entry。"
+          },
           senses: {
             type: "array",
             description: "這個詞性的所有獨立意思。**1 個 sense = 1 個元素**。如果單字無歧義只放 1 個元素;有多個截然不同的意思就放多個元素。",
@@ -185,6 +188,21 @@ async function fetchWordExplanation(word, language) {
 - chineseTranslation: ["放鬆", "紓壓"]  ← 錯,是字串不是陣列
 - chineseTranslation: "放鬆"  / senses 6 個元素  ← 錯,同義詞應該連在同一字串裡
 - senses 只放 1 個元素 chineseTranslation: "放鬆、解開"  ← 錯,不同意思不能放同字串
+
+══════════════════════════════════════════
+🚨 partOfSpeech 必須是「單一短詞」
+══════════════════════════════════════════
+
+✅ 正確:"動詞" / "名詞" / "形容詞" / "副詞" / "介系詞" / "連接詞" / "代名詞"
+       / "片語動詞" / "動名詞" / "現在分詞" / "過去分詞" / "片語"
+
+❌ 錯誤:不要加括號或附加說明
+  - "名詞(動名詞)"     → 應該寫 "動名詞"
+  - "動詞(現在分詞)"   → 應該寫 "現在分詞"
+  - "片語動詞 (phrasal verb)" → 應該寫 "片語動詞"
+
+如果同一個字同時是兩種詞性(例如 snorkeling 同時是「動名詞」與「現在分詞」),
+就建立兩筆 meaning entry,每筆的 partOfSpeech 各自獨立一個短詞。
 
 ══════════════════════════════════════════
 

@@ -708,8 +708,7 @@ main {
 }
 
 .senses-list {
-  display: inline-block;
-  vertical-align: top;
+  display: block;
 }
 
 .sense-item {
@@ -718,15 +717,16 @@ main {
 }
 
 .meaning-group {
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 2px 0;
+  display: block;
+  padding: 5px 0;
 }
 
-.meaning-group .pos-inline {
-  flex-shrink: 0;
-  margin-top: 2px;
+.meaning-group .pos-line {
+  margin-bottom: 4px;
+}
+
+.meaning-group .senses-list {
+  padding-left: 4px;
 }
 
 /* Claude 詳細頁的 sense block */
