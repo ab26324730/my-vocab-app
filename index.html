@@ -90,11 +90,11 @@
         <p class="hint">💡 Claude 會生成詳細翻譯、例句、語感說明(約 NT$0.30–0.90)</p>
       </form>
 
-      <!-- 模式 1b:手動 Claude(產生 prompt,自己貼到 Claude.ai)-->
+      <!-- 模式 1b:手動 Claude(自己用 Claude 查,貼 JSON 回來)-->
       <form id="add-form-claude-manual" class="add-mode-form" data-mode="claude-manual" style="display:none;">
         <p class="form-hint manual-claude-intro">
-          💡 用你自己的 Claude(網頁/桌面/手機 APP)查單字,把回應 JSON 貼回來。<br>
-          <strong>完全不消耗 API 費用</strong>,適合 Claude Max 訂閱者。
+          💡 用你自己的 Claude 查單字,把 JSON 回應貼回來。<strong>完全不消耗 API 費用</strong>,適合 Claude Max 訂閱者。<br>
+          🔁 Claude 對話有記憶,**第一次** 給過 prompt 後,後續直接輸入單字即可,**不用再產生 prompt**。
         </p>
 
         <div class="form-row form-row-split">
@@ -121,24 +121,32 @@
           <div class="tag-suggestions" id="cm-tag-suggestions"></div>
         </div>
 
-        <button type="button" id="cm-generate-prompt" class="primary-btn">產生 Prompt</button>
+        <!-- 產生 Prompt 區(可收合,預設收合)-->
+        <div class="cm-prompt-toggle-wrap">
+          <button type="button" id="cm-toggle-prompt" class="ghost-btn-mini">
+            <span id="cm-toggle-prompt-label">📋 展開:產生 Prompt(初次或新開 Claude 對話用)</span>
+          </button>
+        </div>
 
-        <div id="cm-prompt-area" style="display:none; margin-top: 16px;">
+        <div id="cm-prompt-area" style="display:none;">
           <div class="form-row">
             <div class="prompt-header">
-              <label>Step 1:把這段貼到 Claude</label>
+              <label>把這段貼到 Claude(初次給一次就好,後續同對話可省略)</label>
               <button type="button" id="cm-copy-prompt" class="ghost-btn-mini">📋 一鍵複製</button>
             </div>
             <textarea id="cm-generated-prompt" rows="8" readonly></textarea>
+            <p class="form-hint" style="margin-top:4px;">點上面「產生 Prompt」會根據目前輸入的單字與語言更新內容。</p>
+            <button type="button" id="cm-generate-prompt" class="ghost-btn-mini" style="margin-top:6px;">🔄 產生 / 更新 Prompt</button>
           </div>
-
-          <div class="form-row">
-            <label>Step 2:把 Claude 的 JSON 回應貼這裡</label>
-            <textarea id="cm-response" rows="10" placeholder='Claude 回的 JSON,直接貼這裡。可以含 ```json``` 包覆,系統會自動處理。'></textarea>
-          </div>
-
-          <button type="submit" class="primary-btn">解析並新增到單字本</button>
         </div>
+
+        <!-- Claude 回應 + 解析 -->
+        <div class="form-row" style="margin-top: 14px;">
+          <label>Claude 的 JSON 回應</label>
+          <textarea id="cm-response" rows="10" placeholder='從 Claude 把整段 JSON 複製貼這裡。可包含 ```json``` 標記,系統會自動處理。'></textarea>
+        </div>
+
+        <button type="submit" class="primary-btn">解析並新增到單字本</button>
       </form>
 
       <!-- 模式 2:快速新增 -->

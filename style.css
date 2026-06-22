@@ -384,7 +384,18 @@ main {
   padding: 12px 14px;
   border-radius: 8px;
   margin-bottom: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
+  font-size: 13px;
+}
+
+.cm-prompt-toggle-wrap {
+  margin: 14px 0 4px;
+}
+
+.cm-prompt-toggle-wrap .ghost-btn-mini {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
 }
 
 .prompt-header {

@@ -1045,23 +1045,45 @@ function parseManualClaudeResponse(text) {
   return parsed;
 }
 
-// 「產生 Prompt」按鈕
-document.getElementById("cm-generate-prompt").addEventListener("click", () => {
-  const word = document.getElementById("cm-word").value.trim();
+// 展開/收合 Prompt 區
+function regenerateCMPrompt() {
+  const word = document.getElementById("cm-word").value.trim() || "(請先輸入單字)";
   const language = document.getElementById("cm-language").value;
-  if (!word) {
-    toast("請先輸入單字", "error");
-    document.getElementById("cm-word").focus();
-    return;
-  }
   const settings = loadSettings();
   const prompt = generateManualClaudePrompt(word, language, settings.nativeLanguage || "繁體中文");
   document.getElementById("cm-generated-prompt").value = prompt;
-  document.getElementById("cm-prompt-area").style.display = "block";
-  // 自動 focus 到 prompt textarea 方便手動複製
-  const ta = document.getElementById("cm-generated-prompt");
-  ta.focus();
-  ta.setSelectionRange(0, 0);
+}
+
+document.getElementById("cm-toggle-prompt").addEventListener("click", () => {
+  const area = document.getElementById("cm-prompt-area");
+  const label = document.getElementById("cm-toggle-prompt-label");
+  const expanded = area.style.display !== "none";
+  if (expanded) {
+    area.style.display = "none";
+    label.textContent = "📋 展開:產生 Prompt(初次或新開 Claude 對話用)";
+  } else {
+    area.style.display = "block";
+    label.textContent = "📋 收合 Prompt";
+    regenerateCMPrompt();
+  }
+});
+
+// 「🔄 產生 / 更新 Prompt」按鈕(area 內部)
+document.getElementById("cm-generate-prompt").addEventListener("click", () => {
+  regenerateCMPrompt();
+  toast("Prompt 已更新", "success");
+});
+
+// 輸入單字或切語言時,如果 prompt area 已展開,自動同步更新
+document.getElementById("cm-word").addEventListener("input", () => {
+  if (document.getElementById("cm-prompt-area").style.display !== "none") {
+    regenerateCMPrompt();
+  }
+});
+document.getElementById("cm-language").addEventListener("change", () => {
+  if (document.getElementById("cm-prompt-area").style.display !== "none") {
+    regenerateCMPrompt();
+  }
 });
 
 // 「一鍵複製」按鈕
@@ -1135,11 +1157,10 @@ document.getElementById("add-form-claude-manual").addEventListener("submit", e =
   preview.innerHTML = renderWordDetail(record);
   preview.style.display = "block";
 
-  // 清空表單,準備下一個
+  // 清空,準備下一個單字
   document.getElementById("cm-word").value = "";
   document.getElementById("cm-response").value = "";
-  document.getElementById("cm-prompt-area").style.display = "none";
-  document.getElementById("cm-tags").value = "";
+  // 保留 tags 與 prompt area 狀態(連續查詞用同樣資料集很常見)
   document.getElementById("cm-word").focus();
   renderTagSuggestions("cm-tag-suggestions", "cm-tags");
 
