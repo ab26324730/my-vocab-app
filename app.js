@@ -1809,17 +1809,67 @@ function renderWordDetail(record) {
 function resetReviewView() {
   document.getElementById("review-empty").style.display = "block";
   document.getElementById("review-area").style.display = "none";
+  populateReviewDatasetSelect();
+}
+
+// 把所有用過的 tag 路徑(含中間層)填入複習資料集下拉
+function populateReviewDatasetSelect() {
+  const select = document.getElementById("review-dataset");
+  if (!select) return;
+  const current = select.value || "__all__";
+
+  // 收集所有 path(含中間層)
+  const paths = new Set();
+  for (const w of state.words) {
+    for (const tag of getTags(w)) {
+      const segs = tag.split("/").map(s => s.trim()).filter(Boolean);
+      let p = "";
+      for (const seg of segs) {
+        p = p ? `${p}/${seg}` : seg;
+        paths.add(p);
+      }
+    }
+  }
+  const sortedPaths = [...paths].sort((a, b) => a.localeCompare(b, "zh-Hant"));
+  const untaggedCount = state.words.filter(w => getTags(w).length === 0).length;
+
+  const opts = [];
+  opts.push(`<option value="__all__">📁 全部 (${state.words.length})</option>`);
+  if (untaggedCount > 0) {
+    opts.push(`<option value="__untagged__">❓ 未分類 (${untaggedCount})</option>`);
+  }
+  for (const path of sortedPaths) {
+    const count = state.words.filter(w => matchesTagPath(w, path)).length;
+    opts.push(`<option value="${escapeAttr(path)}">${escapeHtml(path)} (${count})</option>`);
+  }
+  select.innerHTML = opts.join("");
+
+  // 還原之前的選擇(如果還存在)
+  const stillValid = [...select.options].some(o => o.value === current);
+  select.value = stillValid ? current : "__all__";
 }
 
 document.querySelectorAll(".review-start-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const scope = btn.dataset.scope;
+    const datasetSel = document.getElementById("review-dataset");
+    const dataset = datasetSel ? datasetSel.value : "__all__";
+
     let pool = state.words;
+
+    // 1. 先用資料集過濾
+    if (dataset === "__untagged__") {
+      pool = pool.filter(w => getTags(w).length === 0);
+    } else if (dataset && dataset !== "__all__") {
+      pool = pool.filter(w => matchesTagPath(w, dataset));
+    }
+
+    // 2. 再用狀態過濾
     if (scope === "unknown") pool = pool.filter(w => w.status === "unknown");
     if (scope === "new") pool = pool.filter(w => w.status === "new");
 
     if (pool.length === 0) {
-      toast("沒有符合範圍的單字哦", "error");
+      toast("這個範圍裡沒有符合的單字", "error");
       return;
     }
 

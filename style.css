@@ -1213,6 +1213,49 @@ main {
 }
 
 /* ===== 複習模式 ===== */
+.review-dataset-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 20px;
+  padding: 12px 14px;
+  background: var(--card-bg);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+.review-dataset-row label {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 600;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+#review-dataset {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  outline: none;
+}
+
+#review-dataset:focus {
+  border-color: var(--primary);
+}
+
+@media (max-width: 600px) {
+  .review-dataset-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+  #review-dataset { font-size: 16px; }
+}
+
 .review-options {
   display: flex;
   flex-direction: column;
