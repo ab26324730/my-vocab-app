@@ -1059,11 +1059,27 @@ function parseManualClaudeResponse(text) {
   }
   s = s.substring(firstBrace, lastBrace + 1);
 
+  // 寬鬆化:容錯 Claude 偶爾寫出的 JS-style 而非嚴格 JSON
+  // 1. 移除陣列/物件最後一個元素後面的多餘逗號(trailing comma)
+  s = s.replace(/,(\s*[}\]])/g, "$1");
+  // 2. 移除 // 行註解(Claude 偶爾會加說明)
+  s = s.replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  // 3. 移除 /* ... */ 區塊註解
+  s = s.replace(/\/\*[\s\S]*?\*\//g, "");
+
   let parsed;
   try {
     parsed = JSON.parse(s);
   } catch (e) {
-    throw new Error("JSON 格式錯誤:" + e.message);
+    // 給出更友善的錯誤訊息,並指出大概在第幾個字元
+    const m = e.message.match(/position (\d+)/);
+    let hint = "";
+    if (m) {
+      const pos = parseInt(m[1], 10);
+      const around = s.substring(Math.max(0, pos - 30), Math.min(s.length, pos + 30));
+      hint = `\n\n錯誤大約在這附近:\n...${around}...`;
+    }
+    throw new Error("JSON 格式錯誤:" + e.message + hint);
   }
 
   // 基本欄位檢查
